@@ -540,6 +540,21 @@
   white-space: nowrap;
 }
 
+/*
+ * Column rules as well as row rules, so the figures read as a grid. The last
+ * column is left open: its edge is the wrapper's own border, and doubling them
+ * puts a visible seam down the right-hand side.
+ */
+.table th,
+.table td {
+  border-right: 1px solid var(--border);
+}
+
+.table th:last-child,
+.table td:last-child {
+  border-right: 0;
+}
+
 /* A list should end on content, not on a rule. */
 .table tbody tr:last-child td {
   border-bottom: 0;
