@@ -68,10 +68,10 @@ export async function home(ctx) {
           : 'Add your first product',
       }),
     ]),
-    button({ class: 'tile', onclick: () => go('reports', { preset: 'month' }) }, [
+    button({ class: 'tile', onclick: () => go('reports', { preset: 'today' }) }, [
       div({ class: 'tile__icon' }, icon('receipt', { size: 26 })),
       div({ class: 'tile__label', text: 'Sales report' }),
-      div({ class: 'tile__hint', text: 'Every line sold, any period' }),
+      div({ class: 'tile__hint', text: "Today's lines, or any period" }),
     ]),
   ]);
 

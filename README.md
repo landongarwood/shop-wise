@@ -121,8 +121,10 @@ pair in both themes, grouped by what the ratio has to buy — 4.5:1 for text,
 3:1 for anything carrying meaning by colour alone, lower bars for outlines and
 dividers, which is roughly where shipping products sit.
 
-The mark is a cup whose steam rises as three bars: the cafe and the takings in
-one shape, drawn so it still reads at 16px.
+The mark is a shopping bag with a smile — it says "shop" before anything is
+read, which a chart or a receipt does not, those belonging to every analytics
+tool ever made. One colour, nothing behind it, drawn so the silhouette and the
+smile survive being shrunk to 16px.
 [src/ui/assets/logo.svg](src/ui/assets/logo.svg) is the single source — it is
 the favicon (and so the taskbar icon, since the window is an Edge app window),
 the header brand, and the input to `npm run icon`, which renders it through

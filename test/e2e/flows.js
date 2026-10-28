@@ -325,6 +325,34 @@ async function main() {
     (await page.evaluate(`document.querySelectorAll('.screen table').length`)) === 1
   );
 
+  // Headers of numeric columns must sit on the same right edge as the figures
+  // under them; CSS specificity silently broke this once.
+  const alignment = await page.evaluate(`
+    (() => {
+      const table = document.querySelector('.screen table');
+      const heads = [...table.querySelectorAll('th')];
+      const index = heads.findIndex((th) => th.textContent.trim().startsWith('Total'));
+      const th = heads[index];
+      const td = table.querySelector('tbody tr').children[index];
+      return {
+        headerAlign: getComputedStyle(th).textAlign,
+        cellAlign: getComputedStyle(td).textAlign,
+        headerRight: Math.round(th.getBoundingClientRect().right),
+        cellRight: Math.round(td.getBoundingClientRect().right),
+      };
+    })()
+  `);
+  check(
+    'a numeric header is right-aligned like its figures',
+    alignment.headerAlign === 'right' && alignment.cellAlign === 'right',
+    JSON.stringify(alignment)
+  );
+  check(
+    'the header and its column share a right edge',
+    Math.abs(alignment.headerRight - alignment.cellRight) <= 1,
+    JSON.stringify(alignment)
+  );
+
   const headings = await page.evaluate(
     `JSON.stringify([...document.querySelectorAll('.screen th')].map((th) => th.textContent.replace(/[▲▼]/g, '').trim()))`
   );

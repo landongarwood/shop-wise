@@ -20,10 +20,10 @@
   flex: 0 0 auto;
 }
 
+/* A line mark with nothing behind it, so no shadow to cast. */
 .appbar__brand img {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 2px 4px rgb(79 70 229 / 28%));
 }
 
 .appbar__back {
@@ -553,8 +553,17 @@
   cursor: pointer;
 }
 
-.table__num {
+/*
+ * Qualified with th/td on purpose: `.table th` sets text-align and outranks a
+ * bare class, which silently left-aligns numeric headers over right-aligned
+ * figures.
+ */
+.table th.table__num,
+.table td.table__num {
   text-align: right;
+}
+
+.table__num {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }

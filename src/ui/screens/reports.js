@@ -27,7 +27,7 @@ const PERIODS = [
 export async function reports(ctx) {
   const { api, format, go, params } = ctx;
 
-  const preset = params.from || params.to ? null : params.preset ?? 'month';
+  const preset = params.from || params.to ? null : params.preset ?? 'today';
 
   const query = new URLSearchParams();
   if (preset) query.set('preset', preset);
