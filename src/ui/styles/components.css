@@ -1458,3 +1458,73 @@
     left: var(--gutter);
   }
 }
+
+/* ---------- deleted records ---------- */
+
+/*
+ * Deleted means "taken out of the figures", not "gone". The row stays, struck
+ * through and quietened, so the shopkeeper can see what they undid and put it
+ * back. It has to stay readable: this is a record, not a ghost. Buttons and
+ * badges inside the row keep their own look, since a struck-through control
+ * reads as unusable.
+ */
+.table__row--deleted td {
+  color: var(--text-faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.table__row--deleted .table__strong {
+  font-weight: 500;
+}
+
+.table__row--deleted button,
+.table__row--deleted .badge,
+.event--deleted button,
+.event--deleted .badge {
+  text-decoration: none;
+}
+
+.event--deleted .event__title,
+.event--deleted .event__sub,
+.event--deleted .event__amount {
+  color: var(--text-faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.event--deleted .event__mark {
+  background: var(--surface-sunken);
+  color: var(--text-faint);
+}
+
+.event--deleted .money--debt,
+.event--deleted .money--paid,
+.table__row--deleted .money--debt,
+.table__row--deleted .money--paid {
+  color: var(--text-faint);
+}
+
+/* The one part of a deleted row that is not struck through: what it now says. */
+.tag--deleted {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-soft);
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Two small labels side by side in one cell, wrapping on a narrow window. */
+.row-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}

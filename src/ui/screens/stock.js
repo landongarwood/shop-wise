@@ -256,15 +256,29 @@ async function openProductSheet(product, ctx) {
   const removeDelivery = async (movement) => {
     const confirmed = await confirmSheet({
       title: 'Remove this delivery?',
-      message: `${format.quantity(movement.quantity)} ${product.unit ?? ''} will be taken back off ${product.name}.`
-        .replace('  ', ' '),
+      message:
+        `${format.quantity(movement.quantity)} ${product.unit ?? ''} will be taken back off ${product.name}. `.replace(
+          '  ',
+          ' '
+        ) + 'It stays on this list, crossed out, and you can put it back.',
       confirmLabel: 'Remove',
     });
     if (!confirmed) return;
 
     await api.delete(`/stock/entries/${movement.id}`);
     closeSheet(null);
-    toastOk('Delivery removed');
+    toastOk('Delivery removed — it is crossed out on the history');
+    await reload();
+  };
+
+  /** Nothing was destroyed, so bringing it back asks nothing. */
+  const restore = async (movement) => {
+    await api.post(
+      movement.kind === 'in' ? `/stock/entries/${movement.id}/restore` : `/sales/${movement.id}/restore`,
+      {}
+    );
+    closeSheet(null);
+    toastOk(movement.kind === 'in' ? 'Delivery put back' : 'Sale put back');
     await reload();
   };
 
@@ -287,7 +301,7 @@ async function openProductSheet(product, ctx) {
 
     const confirmed = await confirmSheet({
       title: 'Delete this sale?',
-      message: consequences.join(' '),
+      message: `${consequences.join(' ')} It stays on the history, crossed out, and you can put it back.`,
       confirmLabel: 'Delete the sale',
     });
     if (!confirmed) return;
@@ -310,13 +324,19 @@ async function openProductSheet(product, ctx) {
   const table = dataTable({
     rows,
     empty: 'Nothing has moved yet.',
+    rowClass: (movement) => (movement.deletedAt ? 'table__row--deleted' : ''),
     columns: [
       { key: 'at', label: 'When', cell: (movement) => format.relativeDay(movement.at) },
       {
         key: 'kind',
         label: 'Movement',
+        // A deleted row still says what it was, because "what did I just take
+        // off?" is the question being asked when looking at it.
         cell: (movement) =>
-          badge(movement.kind === 'in' ? 'Taken in' : 'Sold', movement.kind === 'in' ? 'paid' : 'quiet'),
+          span({ class: 'row-tags' }, [
+            badge(movement.kind === 'in' ? 'Taken in' : 'Sold', movement.kind === 'in' ? 'paid' : 'quiet'),
+            movement.deletedAt ? span({ class: 'tag--deleted', text: 'Deleted' }) : null,
+          ]),
       },
       {
         key: 'quantity',
@@ -345,8 +365,20 @@ async function openProductSheet(product, ctx) {
         key: 'remove',
         label: '',
         width: '1%',
-        cell: (movement) =>
-          movement.kind === 'in'
+        cell: (movement) => {
+          if (movement.deletedAt) {
+            return button(
+              {
+                class: 'icon-button',
+                title: 'Put this back',
+                ariaLabel: 'Put this back',
+                onclick: () => restore(movement),
+              },
+              icon('undo', { size: 16 })
+            );
+          }
+
+          return movement.kind === 'in'
             ? button(
                 { class: 'icon-button', ariaLabel: 'Remove this delivery', onclick: () => removeDelivery(movement) },
                 icon('trash', { size: 16 })
@@ -358,7 +390,8 @@ async function openProductSheet(product, ctx) {
                   onclick: () => removeSale(movement),
                 },
                 icon('trash', { size: 16 })
-              ),
+              );
+        },
       },
     ],
   });

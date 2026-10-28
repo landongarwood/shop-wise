@@ -64,12 +64,31 @@ describe('a collection repository', () => {
     await assert.rejects(() => products.patch('ghost', { name: 'x' }), /no longer exists/);
   });
 
-  test('remove reports whether there was anything to remove', async () => {
+  test('a deleted record stops counting but is still there', async () => {
     await products.add({ id: 'p1' });
+    await products.add({ id: 'p2' });
 
-    assert.equal(await products.remove('p1'), true);
-    assert.equal(await products.remove('p1'), false, 'removing twice is not an error');
-    assert.deepEqual(products.all(), []);
+    const deleted = await products.softDelete('p1', '2026-03-15T10:00:00.000Z');
+
+    assert.equal(deleted.deletedAt, '2026-03-15T10:00:00.000Z');
+    assert.deepEqual(products.all().map((r) => r.id), ['p2'], 'left out of everything that counts');
+    assert.deepEqual(products.withDeleted().map((r) => r.id), ['p1', 'p2'], 'but still on the record');
+    assert.equal(products.find('p1').id, 'p1', 'and can still be found by id');
+    assert.equal(products.exists('p1'), true);
+  });
+
+  test('a deleted record can be brought back', async () => {
+    await products.add({ id: 'p1' });
+    await products.softDelete('p1', '2026-03-15T10:00:00.000Z');
+
+    const restored = await products.restore('p1');
+
+    assert.equal(restored.deletedAt, null);
+    assert.deepEqual(products.all().map((r) => r.id), ['p1']);
+  });
+
+  test('deleting a record that was never there is refused', async () => {
+    await assert.rejects(() => products.softDelete('ghost', '2026-03-15T10:00:00.000Z'), /no longer exists/);
   });
 
   test('two repositories over one store stay out of each other', async () => {
@@ -86,8 +105,9 @@ describe('a collection repository', () => {
   test('every write goes through the store, so nothing bypasses persistence', async () => {
     await products.add({ id: 'p1' });
     await products.patch('p1', { name: 'Coffee' });
-    await products.remove('p1');
+    await products.softDelete('p1', '2026-03-15T10:00:00.000Z');
+    await products.restore('p1');
 
-    assert.equal(store.writes, 3);
+    assert.equal(store.writes, 4);
   });
 });

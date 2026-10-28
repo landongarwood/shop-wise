@@ -48,9 +48,18 @@ class LedgerService {
     });
   }
 
+  /**
+   * A payment keyed in wrongly stops counting against the customer's balance,
+   * but stays on their history struck through, and can be brought back.
+   */
   async removePayment(id) {
     this.payments.get(id);
-    return this.payments.remove(id);
+    return this.payments.softDelete(id, this.clock.now().toISOString());
+  }
+
+  async restorePayment(id) {
+    this.payments.get(id);
+    return this.payments.restore(id);
   }
 
   paymentsList({ customerId = null, from = null, to = null, limit = 200 } = {}) {
@@ -114,9 +123,12 @@ class LedgerService {
   statement(customerId, { limit = 100 } = {}) {
     const customer = this.customers.get(customerId);
 
+    // Deleted entries are included here and nowhere else: this is the record
+    // of what happened to the account, and a line that was taken back is part
+    // of that. They are marked, and they move no money.
     const events = [
       ...this.saleReader
-        .all()
+        .withDeleted()
         .filter((sale) => sale.customerId === customerId)
         .map((sale) => ({
           kind: 'sale',
@@ -125,9 +137,10 @@ class LedgerService {
           amount: sale.total,
           items: sale.items,
           note: sale.note,
+          deletedAt: sale.deletedAt ?? null,
         })),
       ...this.payments
-        .all()
+        .withDeleted()
         .filter((payment) => payment.customerId === customerId)
         .map((payment) => ({
           kind: 'payment',
@@ -135,13 +148,16 @@ class LedgerService {
           at: payment.at,
           amount: payment.amount,
           note: payment.note,
+          deletedAt: payment.deletedAt ?? null,
         })),
     ].sort(byOldest);
 
-    // Walk forward to attach a running balance, then show newest first.
+    // Walk forward to attach a running balance, then show newest first. A
+    // deleted entry leaves the balance where it was, so the figures beside it
+    // still read as the account actually stood.
     let running = 0;
     for (const event of events) {
-      running += event.kind === 'sale' ? event.amount : -event.amount;
+      if (!event.deletedAt) running += event.kind === 'sale' ? event.amount : -event.amount;
       event.balanceAfter = running;
     }
 
@@ -151,7 +167,10 @@ class LedgerService {
       customer,
       ...position,
       entries: events.reverse().slice(0, limit),
+      // Two different questions: how long the list is, and how much of it
+      // counts. The deleted ones are in the first and not the second.
       entryCount: events.length,
+      countedEntryCount: events.filter((event) => !event.deletedAt).length,
     };
   }
 

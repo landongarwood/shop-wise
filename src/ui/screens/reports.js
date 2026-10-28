@@ -200,12 +200,18 @@ export async function reports(ctx) {
     rows: report.lines,
     initialSort: { key: 'at', direction: 'desc' },
     onRowClick: (line) => go('customer', { id: line.customerId }),
+    rowClass: (line) => (line.deletedAt ? 'table__row--deleted' : ''),
     columns: [
       {
         key: 'at',
         label: 'Date',
         sort: by.text((line) => line.at),
-        cell: (line) => format.relativeDay(line.at),
+        // A deleted line is listed but adds up to nothing, so it says so here
+        // rather than quietly failing to match the total below.
+        cell: (line) =>
+          line.deletedAt
+            ? span({}, [format.relativeDay(line.at), ' ', span({ class: 'tag--deleted', text: 'Deleted' })])
+            : format.relativeDay(line.at),
       },
       {
         key: 'product',
@@ -244,11 +250,13 @@ export async function reports(ctx) {
     ],
   });
 
+  const deleted = report.totals.deletedCount;
   const countLine = div({
     class: 'picker__count',
     text: report.truncated
       ? `showing the latest ${report.lines.length} lines — narrow the period to see the rest`
-      : `${report.totals.lineCount} ${report.totals.lineCount === 1 ? 'line' : 'lines'}`,
+      : `${report.totals.lineCount} ${report.totals.lineCount === 1 ? 'line' : 'lines'}` +
+        (deleted ? ` · ${deleted} deleted, not counted` : ''),
   });
 
   return {

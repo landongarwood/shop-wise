@@ -231,8 +231,16 @@ describe('the HTTP API', () => {
       assert.equal((await call('GET', `/stock/products/${product.id}/movements?limit=1`)).payload.entries.length, 1);
       assert.equal((await call('GET', `/stock/products/${product.id}/movements?limit=0`)).status, 400);
 
-      assert.equal((await call('DELETE', `/stock/entries/${entry.id}`)).payload.removed, true);
+      const deleted = await call('DELETE', `/stock/entries/${entry.id}`);
+      assert.ok(deleted.payload.deletedAt, 'the entry is marked rather than erased');
       assert.equal((await call('GET', '/stock')).payload.find((row) => row.id === product.id).onHand, 0);
+
+      const afterDelete = await call('GET', `/stock/products/${product.id}/movements`);
+      assert.equal(afterDelete.payload.total, 1, 'and still appears in the history');
+      assert.ok(afterDelete.payload.entries[0].deletedAt);
+
+      assert.equal((await call('POST', `/stock/entries/${entry.id}/restore`)).payload.deletedAt, null);
+      assert.equal((await call('GET', '/stock')).payload.find((row) => row.id === product.id).onHand, 4);
     });
 
     test('sales can be listed, fetched and deleted', async () => {
@@ -252,13 +260,18 @@ describe('the HTTP API', () => {
       assert.equal((await call('GET', `/sales/${sale.id}`)).payload.total, 200);
       assert.equal((await call('GET', '/sales/nope')).status, 404);
 
-      assert.equal((await call('DELETE', `/sales/${sale.id}`)).payload.removed, true);
-      assert.equal((await call('GET', `/sales/${sale.id}`)).status, 404);
+      assert.ok((await call('DELETE', `/sales/${sale.id}`)).payload.deletedAt);
+      assert.ok(!(await call('GET', '/sales')).payload.some((row) => row.id === sale.id), 'gone from the list');
       assert.equal(
         (await call('GET', '/stock')).payload.find((row) => row.id === product.id).onHand,
         10,
         'deleting the sale put the stock back'
       );
+
+      // The sale itself is still there to be looked at, and to be brought back.
+      assert.ok((await call('GET', `/sales/${sale.id}`)).payload.deletedAt);
+      assert.equal((await call('POST', `/sales/${sale.id}/restore`)).payload.deletedAt, null);
+      assert.equal((await call('GET', '/stock')).payload.find((row) => row.id === product.id).onHand, 8);
     });
 
     test('payments can be listed and deleted, and the balance follows', async () => {
@@ -271,8 +284,16 @@ describe('the HTTP API', () => {
       const before = await call('GET', `/customers/${customer.id}/statement`);
       assert.equal(before.payload.balance, -1500, 'paid ahead');
 
-      assert.equal((await call('DELETE', `/payments/${payment.id}`)).payload.removed, true);
+      assert.ok((await call('DELETE', `/payments/${payment.id}`)).payload.deletedAt);
       assert.equal((await call('GET', `/customers/${customer.id}/statement`)).payload.balance, 0);
+
+      const statement = (await call('GET', `/customers/${customer.id}/statement`)).payload;
+      assert.equal(statement.entries.length, 1, 'the payment is still on the history');
+      assert.ok(statement.entries[0].deletedAt);
+      assert.equal(statement.entries[0].balanceAfter, 0, 'and moved no money');
+
+      assert.equal((await call('POST', `/payments/${payment.id}/restore`)).payload.deletedAt, null);
+      assert.equal((await call('GET', `/customers/${customer.id}/statement`)).payload.balance, -1500);
     });
 
     test('a customer can be changed and hidden', async () => {

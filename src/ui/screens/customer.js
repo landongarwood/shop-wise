@@ -1,4 +1,4 @@
-import { div, button } from '../core/dom.js';
+import { div, button, span } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { confirmSheet, openSheet } from '../core/sheet.js';
 import { toastOk } from '../core/toast.js';
@@ -36,7 +36,7 @@ export async function customer(ctx) {
         text:
           statement.balance === 0
             ? 'nothing outstanding'
-            : `over ${statement.entryCount} ${statement.entryCount === 1 ? 'entry' : 'entries'}`,
+            : `over ${statement.countedEntryCount} ${statement.countedEntryCount === 1 ? 'entry' : 'entries'}`,
       }),
     ]),
     stat({ label: 'Bought in total', value: format.money(statement.charged) }),
@@ -80,8 +80,16 @@ export async function customer(ctx) {
   };
 }
 
+/**
+ * One line of the account.
+ *
+ * A deleted line stays here, crossed out and counting for nothing, because
+ * "where did that payment go?" is a question the shopkeeper should be able to
+ * answer from this screen. The same row offers to put it back.
+ */
 function eventRow(entry, { api, format, reload }, person) {
   const isSale = entry.kind === 'sale';
+  const deleted = Boolean(entry.deletedAt);
 
   const description = isSale
     ? entry.items.map((item) => `${format.quantity(item.quantity)} × ${item.productName}`).join(', ')
@@ -90,9 +98,11 @@ function eventRow(entry, { api, format, reload }, person) {
   const remove = async () => {
     const confirmed = await confirmSheet({
       title: isSale ? 'Delete this sale?' : 'Delete this payment?',
-      message: isSale
-        ? `${format.money(entry.amount)} will be removed from ${person.name}'s account and the stock put back.`
-        : `${format.money(entry.amount)} will be removed, so ${person.name} will owe that much again.`,
+      message:
+        (isSale
+          ? `${format.money(entry.amount)} will be removed from ${person.name}'s account and the stock put back.`
+          : `${format.money(entry.amount)} will be removed, so ${person.name} will owe that much again.`) +
+        ' It stays on this history, crossed out, and you can put it back.',
     });
     if (!confirmed) return;
 
@@ -101,17 +111,28 @@ function eventRow(entry, { api, format, reload }, person) {
     await reload();
   };
 
-  return div({ class: `event event--${entry.kind}` }, [
+  const restore = async () => {
+    await api.post(isSale ? `/sales/${entry.id}/restore` : `/payments/${entry.id}/restore`, {});
+    toastOk(isSale ? 'Sale put back' : 'Payment put back');
+    await reload();
+  };
+
+  return div({ class: `event event--${entry.kind}${deleted ? ' event--deleted' : ''}` }, [
     div({ class: 'event__mark', text: isSale ? '+' : '−' }),
     div({ class: 'event__main' }, [
-      div({ class: 'event__title', text: isSale ? 'Sale' : 'Payment' }),
+      div({ class: 'event__title' }, [
+        isSale ? 'Sale' : 'Payment',
+        deleted ? span({ class: 'tag--deleted', text: 'Deleted' }) : null,
+      ]),
       div({ class: 'event__sub', text: `${format.dayAndTime(entry.at)} · ${description}` }),
     ]),
     div({ class: 'event__amount' }, [
       div({ class: `tnum ${isSale ? 'money--debt' : 'money--paid'}`, text: format.money(entry.amount) }),
       div({ class: 'faint tnum', text: `balance ${format.money(entry.balanceAfter)}` }),
     ]),
-    button({ class: 'icon-button', ariaLabel: 'Delete', onclick: remove }, icon('trash', { size: 18 })),
+    deleted
+      ? button({ class: 'icon-button', title: 'Put this back', ariaLabel: 'Put this back', onclick: restore }, icon('undo', { size: 18 }))
+      : button({ class: 'icon-button', ariaLabel: 'Delete', onclick: remove }, icon('trash', { size: 18 })),
   ]);
 }
 

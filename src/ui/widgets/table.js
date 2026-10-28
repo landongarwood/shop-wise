@@ -26,6 +26,7 @@ import { el, div, append, clear } from '../core/dom.js';
  * @param {Array} options.rows
  * @param {{key: string, direction: 'asc'|'desc'}} [options.initialSort]
  * @param {(row: any) => void} [options.onRowClick]
+ * @param {(row: any) => string} [options.rowClass] extra classes for one row
  * @param {string} [options.empty]
  * @param {boolean} [options.scroll] keep the header in view and scroll the body
  */
@@ -34,6 +35,7 @@ export function dataTable({
   rows,
   initialSort = null,
   onRowClick = null,
+  rowClass = null,
   empty = 'Nothing to show.',
   scroll = true,
 }) {
@@ -112,7 +114,11 @@ export function dataTable({
     append(
       body,
       ordered.map((row) => {
-        const tr = el('tr', onRowClick ? { class: 'table__row--click', tabIndex: 0 } : {});
+        const classes = [onRowClick ? 'table__row--click' : '', rowClass?.(row) ?? ''].join(' ').trim();
+        const tr = el('tr', {
+          ...(classes ? { class: classes } : {}),
+          ...(onRowClick ? { tabIndex: 0 } : {}),
+        });
 
         if (onRowClick) {
           tr.addEventListener('click', (event) => {

@@ -22,12 +22,26 @@ class CollectionRepository {
     this.label = label;
   }
 
+  /**
+   * Everything that counts: deleted records are left out.
+   *
+   * Deleting here is marking, not erasing — a mis-keyed sale has to stop
+   * affecting the books without disappearing from them. Every calculation in
+   * the app reads this method, so leaving the deleted ones out once, here, is
+   * what makes that true everywhere rather than in each place that remembers.
+   */
   all() {
+    return this.withDeleted().filter((record) => !record.deletedAt);
+  }
+
+  /** Including the deleted ones, for the screens that show what happened. */
+  withDeleted() {
     return this.store.read()[this.collection];
   }
 
+  /** Finds by id whether or not it has been deleted: it is still a record. */
   find(id) {
-    return this.all().find((record) => record.id === id) ?? null;
+    return this.withDeleted().find((record) => record.id === id) ?? null;
   }
 
   /** Like find, but refuses to continue when the record is missing. */
@@ -72,15 +86,16 @@ class CollectionRepository {
     });
   }
 
-  async remove(id) {
-    return this.store.mutate((draft) => {
-      const rows = draft[this.collection];
-      const index = rows.findIndex((record) => record.id === id);
-      if (index === -1) return false;
+  /**
+   * Marks a record deleted. It stays in the file and on the screens that show
+   * history; it simply stops counting.
+   */
+  async softDelete(id, at) {
+    return this.patch(id, { deletedAt: at });
+  }
 
-      rows.splice(index, 1);
-      return true;
-    });
+  async restore(id) {
+    return this.patch(id, { deletedAt: null });
   }
 }
 

@@ -42,11 +42,14 @@ class ReportsService {
     const customerId = query.customerId || null;
     const limit = query.limit ? validate.integer(query.limit, 'limit', { min: 1, max: MAX_ROWS }) : MAX_ROWS;
 
-    const inRange = this.saleReader.all().filter((sale) => dayRange.contains(range, sale.at));
+    // Deleted sales are listed but never counted: the report is read both to
+    // total up a period and to find a sale that went in wrong, and a line that
+    // disappears entirely cannot be checked against the till roll.
+    const inRange = this.saleReader.withDeleted().filter((sale) => dayRange.contains(range, sale.at));
 
     // Options are offered for the whole period, not for what is left after the
     // other filter, so a filter can always be changed rather than only cleared.
-    const options = this.#options(inRange);
+    const options = this.#options(inRange.filter(counts));
 
     const matching = customerId ? inRange.filter((sale) => sale.customerId === customerId) : inRange;
 
@@ -66,14 +69,19 @@ class ReportsService {
             unitPrice: item.unitPrice,
             lineTotal: item.lineTotal,
             note: sale.note,
+            deletedAt: sale.deletedAt ?? null,
           }))
       )
       .sort(byNewest);
 
+    const counted = lines.filter(counts);
+
     const payments = this.paymentReader
-      .all()
+      .withDeleted()
       .filter((payment) => dayRange.contains(range, payment.at))
       .filter((payment) => !customerId || payment.customerId === customerId);
+
+    const countedPayments = payments.filter(counts);
 
     return {
       range: { from: range.fromDay, to: range.toDay, label: range.label },
@@ -81,12 +89,13 @@ class ReportsService {
       options,
 
       totals: {
-        lineCount: lines.length,
-        saleCount: new Set(lines.map((line) => line.saleId)).size,
-        salesTotal: money.sum(lines.map((line) => line.lineTotal)),
-        itemCount: quantity.normalise(lines.reduce((total, line) => total + line.quantity, 0)),
-        paymentsCount: payments.length,
-        paymentsTotal: money.sum(payments.map((payment) => payment.amount)),
+        lineCount: counted.length,
+        deletedCount: lines.length - counted.length,
+        saleCount: new Set(counted.map((line) => line.saleId)).size,
+        salesTotal: money.sum(counted.map((line) => line.lineTotal)),
+        itemCount: quantity.normalise(counted.reduce((total, line) => total + line.quantity, 0)),
+        paymentsCount: countedPayments.length,
+        paymentsTotal: money.sum(countedPayments.map((payment) => payment.amount)),
         // Payments are never tied to a product, so a product filter cannot
         // narrow them. Say so rather than show a figure that does not match.
         paymentsApplyToFilter: !productId,
@@ -123,6 +132,8 @@ class ReportsService {
   }
 }
 
+/** Deleted records are shown, never added up. */
+const counts = (record) => !record.deletedAt;
 const byNewest = (a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0);
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 

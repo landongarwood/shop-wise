@@ -209,6 +209,13 @@ A few details worth knowing before changing things:
   month's sale says.
 - **Products and customers are hidden, never deleted**, because past sales refer
   to them.
+- **Deleting a movement marks it, never erases it.** A deleted delivery, sale or
+  payment stops counting everywhere — stock, balances, reports, today's takings
+  — and stays on the product's and the customer's history, struck through, with
+  a button to put it back. The rule is kept in one place: `all()` on a
+  repository leaves deleted records out, so every calculation is right by
+  default, and the three history views ask for `withDeleted()` on purpose. See
+  [src/persistence/collection-repository.js](src/persistence/collection-repository.js).
 - **No module writes user data through innerHTML.** `el({ text })` always uses
   `textContent`; the single exception is `icons.js`, whose SVG is a literal in
   its own source. A test enforces this.

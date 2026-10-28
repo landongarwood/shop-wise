@@ -17,5 +17,7 @@ module.exports = function registerPayments(router, { ledger }) {
     payload: await ledger.recordPayment(body),
   }));
 
-  router.delete('/payments/:id', async ({ params }) => ({ removed: await ledger.removePayment(params.id) }));
+  router.delete('/payments/:id', ({ params }) => ledger.removePayment(params.id));
+
+  router.post('/payments/:id/restore', ({ params }) => ledger.restorePayment(params.id));
 };

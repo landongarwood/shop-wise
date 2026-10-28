@@ -97,9 +97,18 @@ class InventoryService {
     return this.stockEntries.addMany(entries);
   }
 
-  /** Removes a stock entry, for when a delivery was keyed in wrongly. */
+  /**
+   * Takes a delivery back off the books, for when it was keyed in wrongly.
+   * It stays in the product's history, struck through, and can be brought back.
+   */
   async removeStockEntry(id) {
-    return this.stockEntries.remove(id);
+    this.stockEntries.get(id);
+    return this.stockEntries.softDelete(id, this.clock.now().toISOString());
+  }
+
+  async restoreStockEntry(id) {
+    this.stockEntries.get(id);
+    return this.stockEntries.restore(id);
   }
 
   /**
@@ -116,8 +125,11 @@ class InventoryService {
    * @returns {{entries: object[], total: number, hasMore: boolean}}
    */
   movementsFor(productId, { limit = 25, offset = 0 } = {}) {
+    // History, unlike every other reader, asks for the deleted ones too: a
+    // movement that was taken back still happened, and a row that simply
+    // vanished would leave the shopkeeper wondering what they had done.
     const takenIn = this.stockEntries
-      .all()
+      .withDeleted()
       .filter((entry) => entry.productId === productId)
       .map((entry) => ({
         kind: 'in',
@@ -126,9 +138,10 @@ class InventoryService {
         quantity: entry.quantity,
         who: '',
         note: entry.note ?? '',
+        deletedAt: entry.deletedAt ?? null,
       }));
 
-    const sold = this.saleReader.all().flatMap((sale) =>
+    const sold = this.saleReader.withDeleted().flatMap((sale) =>
       sale.items
         .filter((item) => item.productId === productId)
         .map((item) => ({
@@ -144,6 +157,7 @@ class InventoryService {
           // What removing this row would really take with it.
           saleItemCount: sale.items.length,
           saleTotal: sale.total,
+          deletedAt: sale.deletedAt ?? null,
         }))
     );
 

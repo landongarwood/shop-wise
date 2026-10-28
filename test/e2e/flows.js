@@ -125,6 +125,12 @@ class Page {
   text() {
     return this.evaluate('window.__text()');
   }
+
+  /** For a click made directly through evaluate, which does not settle by itself. */
+  async wait(ms) {
+    await wait(ms);
+    await this.installHelpers();
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -329,6 +335,34 @@ async function main() {
   check('the customer page headlines the balance', text.includes('$14.50'), text.slice(0, 220));
   check('the history holds both the sale and the payment', text.includes('Sale') && text.includes('Payment'));
   check('the history carries a running balance', text.includes('balance'), text.slice(0, 400));
+
+  /* ---------------- deleting, which keeps the record ---------------- */
+
+  // The newest entry is the payment; its button is the first one in the list.
+  await page.evaluate(`document.querySelector('.event .icon-button').click()`);
+  await page.wait(400);
+  check(
+    'deleting warns that the line stays on the history',
+    (await page.evaluate(`document.querySelector('.sheet').innerText`)).includes('crossed out')
+  );
+  await page.evaluate(`document.querySelector('.sheet__foot .button--danger').click()`);
+  await page.wait(800);
+
+  text = await page.text();
+  check('the deleted payment is still listed', (await page.evaluate(`document.querySelectorAll('.event').length`)) === 2);
+  check('and is marked deleted', (await page.evaluate(`document.querySelectorAll('.event--deleted').length`)) === 1);
+  check(
+    'struck through, not merely greyed',
+    (await page.evaluate(`getComputedStyle(document.querySelector('.event--deleted .event__amount')).textDecorationLine`)) ===
+      'line-through'
+  );
+  check('the debt goes back up by the deleted payment', text.includes('$34.50'), text.slice(0, 220));
+
+  await page.evaluate(`document.querySelector('.event--deleted .icon-button').click()`);
+  await page.wait(800);
+  text = await page.text();
+  check('putting it back restores the balance', text.includes('$14.50'), text.slice(0, 220));
+  check('and clears the mark', (await page.evaluate(`document.querySelectorAll('.event--deleted').length`)) === 0);
 
   /* ---------------- report ---------------- */
 
