@@ -21,9 +21,7 @@ module.exports = function registerSales(router, { sales }) {
 
   router.get('/sales/:id', ({ params }) => sales.get(params.id));
 
-  // Deleting marks the sale rather than erasing it, so both of these answer
-  // with the sale as it now stands.
+  // Deleting marks the sale rather than erasing it, so this answers with the
+  // sale as it now stands.
   router.delete('/sales/:id', ({ params }) => sales.remove(params.id));
-
-  router.post('/sales/:id/restore', ({ params }) => sales.restore(params.id));
 };

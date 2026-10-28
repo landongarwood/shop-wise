@@ -1463,10 +1463,9 @@
 
 /*
  * Deleted means "taken out of the figures", not "gone". The row stays, struck
- * through and quietened, so the shopkeeper can see what they undid and put it
- * back. It has to stay readable: this is a record, not a ghost. Buttons and
- * badges inside the row keep their own look, since a struck-through control
- * reads as unusable.
+ * through and quietened, so the shopkeeper can see what they took off. It has
+ * to stay readable: this is a record, not a ghost. The small labels inside it
+ * keep their own look, since they say what the row is rather than what it said.
  */
 .table__row--deleted td {
   color: var(--text-faint);
@@ -1478,10 +1477,7 @@
   font-weight: 500;
 }
 
-.table__row--deleted button,
-.table__row--deleted .badge,
-.event--deleted button,
-.event--deleted .badge {
+.table__row--deleted .badge {
   text-decoration: none;
 }
 

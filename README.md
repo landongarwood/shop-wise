@@ -211,10 +211,11 @@ A few details worth knowing before changing things:
   to them.
 - **Deleting a movement marks it, never erases it.** A deleted delivery, sale or
   payment stops counting everywhere — stock, balances, reports, today's takings
-  — and stays on the product's and the customer's history, struck through, with
-  a button to put it back. The rule is kept in one place: `all()` on a
-  repository leaves deleted records out, so every calculation is right by
-  default, and the three history views ask for `withDeleted()` on purpose. See
+  — and stays on the product's and the customer's history, struck through, as a
+  record of what was taken off. There is no undo: putting it back means
+  recording it again. The rule is kept in one place: `all()` on a repository
+  leaves deleted records out, so every calculation is right by default, and the
+  three history views ask for `withDeleted()` on purpose. See
   [src/persistence/collection-repository.js](src/persistence/collection-repository.js).
 - **No module writes user data through innerHTML.** `el({ text })` always uses
   `textContent`; the single exception is `icons.js`, whose SVG is a literal in

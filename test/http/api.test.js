@@ -239,8 +239,6 @@ describe('the HTTP API', () => {
       assert.equal(afterDelete.payload.total, 1, 'and still appears in the history');
       assert.ok(afterDelete.payload.entries[0].deletedAt);
 
-      assert.equal((await call('POST', `/stock/entries/${entry.id}/restore`)).payload.deletedAt, null);
-      assert.equal((await call('GET', '/stock')).payload.find((row) => row.id === product.id).onHand, 4);
     });
 
     test('sales can be listed, fetched and deleted', async () => {
@@ -268,10 +266,8 @@ describe('the HTTP API', () => {
         'deleting the sale put the stock back'
       );
 
-      // The sale itself is still there to be looked at, and to be brought back.
+      // The sale itself is still there to be looked at.
       assert.ok((await call('GET', `/sales/${sale.id}`)).payload.deletedAt);
-      assert.equal((await call('POST', `/sales/${sale.id}/restore`)).payload.deletedAt, null);
-      assert.equal((await call('GET', '/stock')).payload.find((row) => row.id === product.id).onHand, 8);
     });
 
     test('payments can be listed and deleted, and the balance follows', async () => {
@@ -291,9 +287,6 @@ describe('the HTTP API', () => {
       assert.equal(statement.entries.length, 1, 'the payment is still on the history');
       assert.ok(statement.entries[0].deletedAt);
       assert.equal(statement.entries[0].balanceAfter, 0, 'and moved no money');
-
-      assert.equal((await call('POST', `/payments/${payment.id}/restore`)).payload.deletedAt, null);
-      assert.equal((await call('GET', `/customers/${customer.id}/statement`)).payload.balance, -1500);
     });
 
     test('a customer can be changed and hidden', async () => {

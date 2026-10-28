@@ -49,17 +49,6 @@ describe('deleting a delivery', () => {
     assert.ok(row.deletedAt);
   });
 
-  test('and it can be put back', async () => {
-    const { services, coffee } = await createShop();
-    const entry = await services.inventory.addStock({ productId: coffee.id, quantity: 5 });
-
-    await services.inventory.removeStockEntry(entry.id);
-    const restored = await services.inventory.restoreStockEntry(entry.id);
-
-    assert.equal(restored.deletedAt, null);
-    assert.equal(await stockOf(services, coffee.id), 25);
-  });
-
   test('a delivery that never existed cannot be deleted', async () => {
     const { services } = await createShop();
 
@@ -113,18 +102,6 @@ describe('deleting a sale', () => {
     assert.deepEqual(services.sales.list(), []);
     assert.equal(services.sales.get(sale.id).id, sale.id);
   });
-
-  test('and it can be put back, debt and all', async () => {
-    const { services, coffee, alice } = await createShop();
-    const { sale } = await sell(services, alice.id, coffee.id, 3);
-
-    await services.sales.remove(sale.id);
-    await services.sales.restore(sale.id);
-
-    assert.equal(services.ledger.positionFor(alice.id).balance, 3600);
-    assert.equal(services.inventory.movementTotals().get(coffee.id).onHand, 17);
-    assert.equal(services.sales.list().length, 1);
-  });
 });
 
 describe('deleting a payment', () => {
@@ -142,18 +119,6 @@ describe('deleting a payment', () => {
     const statement = services.ledger.statement(alice.id);
     assert.equal(statement.entries.length, 2, 'the sale and the deleted payment');
     assert.ok(statement.entries.find((entry) => entry.id === payment.id).deletedAt);
-  });
-
-  test('and comes back with its money', async () => {
-    const { services, coffee, alice } = await createShop();
-    await sell(services, alice.id, coffee.id, 1);
-    const payment = await services.ledger.recordPayment({ customerId: alice.id, amount: '5.00' });
-
-    await services.ledger.removePayment(payment.id);
-    await services.ledger.restorePayment(payment.id);
-
-    assert.equal(services.ledger.positionFor(alice.id).balance, 700);
-    assert.equal(services.ledger.paymentsList().length, 1);
   });
 
   test('a deleted payment is not a visit either', async () => {

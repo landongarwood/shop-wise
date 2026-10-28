@@ -76,17 +76,12 @@ class SalesService {
    * undoes its effect everywhere at once.
    *
    * The sale is marked, not erased: it still appears in the product's history
-   * and in the customer's, struck through, and it can be brought back. A shop's
-   * books are a record of what happened, including the mistakes.
+   * and in the customer's, struck through. A shop's books are a record of what
+   * happened, including the mistakes.
    */
   async remove(id) {
     this.sales.get(id); // refuse unknown ids rather than silently succeeding
     return this.sales.softDelete(id, this.clock.now().toISOString());
-  }
-
-  async restore(id) {
-    this.sales.get(id);
-    return this.sales.restore(id);
   }
 
   #buildItem(line) {

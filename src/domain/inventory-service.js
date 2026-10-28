@@ -99,16 +99,11 @@ class InventoryService {
 
   /**
    * Takes a delivery back off the books, for when it was keyed in wrongly.
-   * It stays in the product's history, struck through, and can be brought back.
+   * It stays in the product's history, struck through.
    */
   async removeStockEntry(id) {
     this.stockEntries.get(id);
     return this.stockEntries.softDelete(id, this.clock.now().toISOString());
-  }
-
-  async restoreStockEntry(id) {
-    this.stockEntries.get(id);
-    return this.stockEntries.restore(id);
   }
 
   /**

@@ -50,16 +50,11 @@ class LedgerService {
 
   /**
    * A payment keyed in wrongly stops counting against the customer's balance,
-   * but stays on their history struck through, and can be brought back.
+   * but stays on their history, struck through.
    */
   async removePayment(id) {
     this.payments.get(id);
     return this.payments.softDelete(id, this.clock.now().toISOString());
-  }
-
-  async restorePayment(id) {
-    this.payments.get(id);
-    return this.payments.restore(id);
   }
 
   paymentsList({ customerId = null, from = null, to = null, limit = 200 } = {}) {

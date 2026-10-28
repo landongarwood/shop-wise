@@ -31,6 +31,4 @@ module.exports = function registerStock(router, { inventory }) {
   );
 
   router.delete('/stock/entries/:id', ({ params }) => inventory.removeStockEntry(params.id));
-
-  router.post('/stock/entries/:id/restore', ({ params }) => inventory.restoreStockEntry(params.id));
 };

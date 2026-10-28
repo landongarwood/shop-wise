@@ -93,10 +93,6 @@ class CollectionRepository {
   async softDelete(id, at) {
     return this.patch(id, { deletedAt: at });
   }
-
-  async restore(id) {
-    return this.patch(id, { deletedAt: null });
-  }
 }
 
 module.exports = { CollectionRepository };

@@ -260,7 +260,7 @@ async function openProductSheet(product, ctx) {
         `${format.quantity(movement.quantity)} ${product.unit ?? ''} will be taken back off ${product.name}. `.replace(
           '  ',
           ' '
-        ) + 'It stays on this list, crossed out, and you can put it back.',
+        ) + 'It stays on this list, crossed out.',
       confirmLabel: 'Remove',
     });
     if (!confirmed) return;
@@ -268,17 +268,6 @@ async function openProductSheet(product, ctx) {
     await api.delete(`/stock/entries/${movement.id}`);
     closeSheet(null);
     toastOk('Delivery removed — it is crossed out on the history');
-    await reload();
-  };
-
-  /** Nothing was destroyed, so bringing it back asks nothing. */
-  const restore = async (movement) => {
-    await api.post(
-      movement.kind === 'in' ? `/stock/entries/${movement.id}/restore` : `/sales/${movement.id}/restore`,
-      {}
-    );
-    closeSheet(null);
-    toastOk(movement.kind === 'in' ? 'Delivery put back' : 'Sale put back');
     await reload();
   };
 
@@ -301,7 +290,7 @@ async function openProductSheet(product, ctx) {
 
     const confirmed = await confirmSheet({
       title: 'Delete this sale?',
-      message: `${consequences.join(' ')} It stays on the history, crossed out, and you can put it back.`,
+      message: `${consequences.join(' ')} It stays on the history, crossed out.`,
       confirmLabel: 'Delete the sale',
     });
     if (!confirmed) return;
@@ -365,18 +354,9 @@ async function openProductSheet(product, ctx) {
         key: 'remove',
         label: '',
         width: '1%',
+        // A deleted row has nothing left to do: it is a record now.
         cell: (movement) => {
-          if (movement.deletedAt) {
-            return button(
-              {
-                class: 'icon-button',
-                title: 'Put this back',
-                ariaLabel: 'Put this back',
-                onclick: () => restore(movement),
-              },
-              icon('undo', { size: 16 })
-            );
-          }
+          if (movement.deletedAt) return null;
 
           return movement.kind === 'in'
             ? button(

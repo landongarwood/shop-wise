@@ -18,6 +18,4 @@ module.exports = function registerPayments(router, { ledger }) {
   }));
 
   router.delete('/payments/:id', ({ params }) => ledger.removePayment(params.id));
-
-  router.post('/payments/:id/restore', ({ params }) => ledger.restorePayment(params.id));
 };

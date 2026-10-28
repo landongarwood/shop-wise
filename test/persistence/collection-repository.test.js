@@ -77,16 +77,6 @@ describe('a collection repository', () => {
     assert.equal(products.exists('p1'), true);
   });
 
-  test('a deleted record can be brought back', async () => {
-    await products.add({ id: 'p1' });
-    await products.softDelete('p1', '2026-03-15T10:00:00.000Z');
-
-    const restored = await products.restore('p1');
-
-    assert.equal(restored.deletedAt, null);
-    assert.deepEqual(products.all().map((r) => r.id), ['p1']);
-  });
-
   test('deleting a record that was never there is refused', async () => {
     await assert.rejects(() => products.softDelete('ghost', '2026-03-15T10:00:00.000Z'), /no longer exists/);
   });
@@ -106,8 +96,7 @@ describe('a collection repository', () => {
     await products.add({ id: 'p1' });
     await products.patch('p1', { name: 'Coffee' });
     await products.softDelete('p1', '2026-03-15T10:00:00.000Z');
-    await products.restore('p1');
 
-    assert.equal(store.writes, 4);
+    assert.equal(store.writes, 3);
   });
 });

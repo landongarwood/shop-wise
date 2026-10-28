@@ -336,34 +336,6 @@ async function main() {
   check('the history holds both the sale and the payment', text.includes('Sale') && text.includes('Payment'));
   check('the history carries a running balance', text.includes('balance'), text.slice(0, 400));
 
-  /* ---------------- deleting, which keeps the record ---------------- */
-
-  // The newest entry is the payment; its button is the first one in the list.
-  await page.evaluate(`document.querySelector('.event .icon-button').click()`);
-  await page.wait(400);
-  check(
-    'deleting warns that the line stays on the history',
-    (await page.evaluate(`document.querySelector('.sheet').innerText`)).includes('crossed out')
-  );
-  await page.evaluate(`document.querySelector('.sheet__foot .button--danger').click()`);
-  await page.wait(800);
-
-  text = await page.text();
-  check('the deleted payment is still listed', (await page.evaluate(`document.querySelectorAll('.event').length`)) === 2);
-  check('and is marked deleted', (await page.evaluate(`document.querySelectorAll('.event--deleted').length`)) === 1);
-  check(
-    'struck through, not merely greyed',
-    (await page.evaluate(`getComputedStyle(document.querySelector('.event--deleted .event__amount')).textDecorationLine`)) ===
-      'line-through'
-  );
-  check('the debt goes back up by the deleted payment', text.includes('$34.50'), text.slice(0, 220));
-
-  await page.evaluate(`document.querySelector('.event--deleted .icon-button').click()`);
-  await page.wait(800);
-  text = await page.text();
-  check('putting it back restores the balance', text.includes('$14.50'), text.slice(0, 220));
-  check('and clears the mark', (await page.evaluate(`document.querySelectorAll('.event--deleted').length`)) === 0);
-
   /* ---------------- report ---------------- */
 
   await page.click('.appbar__back');
@@ -506,10 +478,46 @@ async function main() {
   /* ---------------- the books agree ---------------- */
 
   const position = services.ledger.positionFor(alice.id);
+  const paymentId = services.ledger.paymentsList()[0].id;
   check('ledger: 34.50 charged', position.charged === 3450, String(position.charged));
   check('ledger: 20.00 paid', position.paid === 2000, String(position.paid));
   check('ledger: 14.50 still owed', position.balance === 1450, String(position.balance));
   check('stock fell by the 3 kg sold', services.inventory.onHand(coffee.id) === 17, String(services.inventory.onHand(coffee.id)));
+
+  /* ---------------- deleting, which keeps the record ---------------- */
+
+  // Last, because nothing after it could rely on the figures it changes. The
+  // theme check left the page on the home screen, which has no way back.
+  await page.click('.tile', 'Customers');
+  await page.click('tbody tr', 'Alice Mwangi');
+
+  // The newest entry is the payment, so its delete button is the first one.
+  await page.evaluate(`document.querySelector('.event .icon-button').click()`);
+  await page.wait(400);
+  check(
+    'deleting warns that the line stays on the history',
+    (await page.evaluate(`document.querySelector('.sheet').innerText`)).includes('crossed out')
+  );
+  await page.evaluate(`document.querySelector('.sheet__foot .button--danger').click()`);
+  await page.wait(900);
+
+  text = await page.text();
+  check('the deleted payment is still listed', (await page.evaluate(`document.querySelectorAll('.event').length`)) === 2);
+  check('and is marked deleted', (await page.evaluate(`document.querySelectorAll('.event--deleted').length`)) === 1);
+  check(
+    'struck through, not merely greyed',
+    (await page.evaluate(`getComputedStyle(document.querySelector('.event--deleted .event__amount')).textDecorationLine`)) ===
+      'line-through'
+  );
+  check(
+    'a deleted line offers no buttons at all',
+    (await page.evaluate(`document.querySelectorAll('.event--deleted button').length`)) === 0
+  );
+  check('the debt goes back up by the deleted payment', text.includes('$34.50'), text.slice(0, 220));
+
+  const afterDelete = services.ledger.positionFor(alice.id);
+  check('the books agree: the payment no longer counts', afterDelete.paid === 0, String(afterDelete.paid));
+  check('the payment itself is still on file', Boolean(services.ledger.payments.find(paymentId)), paymentId);
 
   check('no uncaught errors in the page', page.pageErrors.length === 0, page.pageErrors.join(' | '));
 

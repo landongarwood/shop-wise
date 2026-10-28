@@ -85,7 +85,7 @@ export async function customer(ctx) {
  *
  * A deleted line stays here, crossed out and counting for nothing, because
  * "where did that payment go?" is a question the shopkeeper should be able to
- * answer from this screen. The same row offers to put it back.
+ * answer from this screen.
  */
 function eventRow(entry, { api, format, reload }, person) {
   const isSale = entry.kind === 'sale';
@@ -102,18 +102,12 @@ function eventRow(entry, { api, format, reload }, person) {
         (isSale
           ? `${format.money(entry.amount)} will be removed from ${person.name}'s account and the stock put back.`
           : `${format.money(entry.amount)} will be removed, so ${person.name} will owe that much again.`) +
-        ' It stays on this history, crossed out, and you can put it back.',
+        ' It stays on this history, crossed out.',
     });
     if (!confirmed) return;
 
     await api.delete(isSale ? `/sales/${entry.id}` : `/payments/${entry.id}`);
     toastOk(isSale ? 'Sale deleted' : 'Payment deleted');
-    await reload();
-  };
-
-  const restore = async () => {
-    await api.post(isSale ? `/sales/${entry.id}/restore` : `/payments/${entry.id}/restore`, {});
-    toastOk(isSale ? 'Sale put back' : 'Payment put back');
     await reload();
   };
 
@@ -130,9 +124,7 @@ function eventRow(entry, { api, format, reload }, person) {
       div({ class: `tnum ${isSale ? 'money--debt' : 'money--paid'}`, text: format.money(entry.amount) }),
       div({ class: 'faint tnum', text: `balance ${format.money(entry.balanceAfter)}` }),
     ]),
-    deleted
-      ? button({ class: 'icon-button', title: 'Put this back', ariaLabel: 'Put this back', onclick: restore }, icon('undo', { size: 18 }))
-      : button({ class: 'icon-button', ariaLabel: 'Delete', onclick: remove }, icon('trash', { size: 18 })),
+    deleted ? null : button({ class: 'icon-button', ariaLabel: 'Delete', onclick: remove }, icon('trash', { size: 18 })),
   ]);
 }
 
