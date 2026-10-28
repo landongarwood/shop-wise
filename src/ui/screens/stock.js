@@ -1,10 +1,10 @@
-import { div, button, input, span, append } from '../core/dom.js';
+import { div, button, input, span } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { openSheet, confirmSheet } from '../core/sheet.js';
 import { toastOk } from '../core/toast.js';
 import { dataTable, statusDot, by } from '../widgets/table.js';
 import { openAddStockSheet, openEditProductSheet, openNewProductSheet } from '../widgets/forms.js';
-import { emptyState, stat } from '../widgets/states.js';
+import { emptyState, stat, badge } from '../widgets/states.js';
 
 /**
  * Stock: what is on the shelves, and the place stock is taken in.
@@ -233,162 +233,204 @@ export async function stock(ctx) {
   };
 }
 
-const HISTORY_PAGE = 20;
+const HISTORY_PAGE = 25;
 
-/** The handful of things you can do to one product. */
+/** Everything you can do to one product, and everything that has happened to it. */
 async function openProductSheet(product, ctx) {
   const { api, format, reload } = ctx;
 
-  const page = (offset) => api.get(`/stock/products/${product.id}/entries?limit=${HISTORY_PAGE}&offset=${offset}`);
+  const page = (offset) =>
+    api.get(`/stock/products/${product.id}/movements?limit=${HISTORY_PAGE}&offset=${offset}`);
 
   const first = await page(0);
-  let shown = first.entries.length;
+  let rows = first.entries.slice();
   let hasMore = first.hasMore;
-
-  /*
-   * A product restocked weekly for two years has a hundred entries behind it,
-   * so the history is paged and scrolls in its own area. The count says how
-   * much is behind the scroll, because a list that just stops is indis-
-   * tinguishable from one that has ended.
-   */
-  const list = div({ class: 'history' });
-  const countLine = div({ class: 'picker__count' });
-  const olderButton = button({ class: 'button button--block' }, 'Show older');
-
+  let loading = false;
   let closeSheet = () => {};
+
+  const countLine = div({ class: 'picker__count' });
 
   const describe = () => {
     countLine.textContent =
       first.total === 0
         ? ''
         : hasMore
-          ? `showing ${shown} of ${first.total}`
-          : `${first.total} ${first.total === 1 ? 'entry' : 'entries'}`;
-    olderButton.hidden = !hasMore;
+          ? `${rows.length} of ${first.total} · scroll for more`
+          : `${first.total} ${first.total === 1 ? 'movement' : 'movements'}`;
   };
 
-  const entryRow = (entry) =>
-    div({ class: 'row row--static' }, [
-      div({ class: 'row__main' }, [
-        div({
-          class: 'row__title tnum',
-          text: `+ ${format.quantity(entry.quantity)} ${product.unit ?? ''}`.trim(),
-        }),
-        div({
-          class: 'row__sub',
-          text: `${format.relativeDay(entry.at)}${entry.note ? ` · ${entry.note}` : ''}`,
-        }),
-      ]),
-      button(
-        {
-          class: 'icon-button',
-          ariaLabel: 'Remove this entry',
-          onclick: async () => {
-            const confirmed = await confirmSheet({
-              title: 'Remove this stock entry?',
-              message: `${format.quantity(entry.quantity)} will be taken back off ${product.name}.`,
-              confirmLabel: 'Remove',
-            });
-            if (confirmed) {
-              await api.delete(`/stock/entries/${entry.id}`);
-              closeSheet(null);
-              toastOk('Entry removed');
-              await reload();
-            }
-          },
-        },
-        icon('trash', { size: 18 })
-      ),
-    ]);
+  const removeDelivery = async (movement) => {
+    const confirmed = await confirmSheet({
+      title: 'Remove this delivery?',
+      message: `${format.quantity(movement.quantity)} ${product.unit ?? ''} will be taken back off ${product.name}.`
+        .replace('  ', ' '),
+      confirmLabel: 'Remove',
+    });
+    if (!confirmed) return;
 
-  olderButton.addEventListener('click', async () => {
-    olderButton.disabled = true;
-    try {
-      const next = await page(shown);
-      append(list, next.entries.map(entryRow));
-      shown += next.entries.length;
-      hasMore = next.hasMore;
-      describe();
-    } finally {
-      olderButton.disabled = false;
-    }
+    await api.delete(`/stock/entries/${movement.id}`);
+    closeSheet(null);
+    toastOk('Delivery removed');
+    await reload();
+  };
+
+  /*
+   * In and out on one timeline. Stock only means anything as the difference
+   * between the two, so a list of deliveries alone invites "sold to whom?" and
+   * then cannot answer it.
+   *
+   * Paged, and scrolling to the end is what asks for the next page rather than
+   * a button to press. The count says what is still behind the scroll, because
+   * a list that just stops looks the same as one that has ended.
+   */
+  const table = dataTable({
+    rows,
+    empty: 'Nothing has moved yet.',
+    columns: [
+      { key: 'at', label: 'When', cell: (movement) => format.relativeDay(movement.at) },
+      {
+        key: 'kind',
+        label: 'Movement',
+        cell: (movement) =>
+          badge(movement.kind === 'in' ? 'Taken in' : 'Sold', movement.kind === 'in' ? 'paid' : 'quiet'),
+      },
+      {
+        key: 'quantity',
+        label: 'Qty',
+        numeric: true,
+        strong: true,
+        cell: (movement) =>
+          span({
+            class: movement.kind === 'in' ? 'money--paid' : '',
+            text: `${movement.kind === 'in' ? '+' : '−'}${format.quantity(movement.quantity)}`,
+          }),
+      },
+      {
+        key: 'who',
+        label: 'Customer / note',
+        cell: (movement) => movement.who || span({ class: 'table__sub', text: movement.note || '—' }),
+      },
+      {
+        key: 'value',
+        label: 'Value',
+        numeric: true,
+        cell: (movement) =>
+          movement.kind === 'sold' ? format.money(movement.lineTotal) : span({ class: 'table__sub', text: '—' }),
+      },
+      {
+        key: 'remove',
+        label: '',
+        width: '1%',
+        // Only a delivery can be taken back from here. A sale is undone from the
+        // customer it belongs to, where its other half lives.
+        cell: (movement) =>
+          movement.kind === 'in'
+            ? button(
+                { class: 'icon-button', ariaLabel: 'Remove this delivery', onclick: () => removeDelivery(movement) },
+                icon('trash', { size: 16 })
+              )
+            : '',
+      },
+    ],
   });
 
-  append(list, first.entries.map(entryRow));
+  const loadMore = async () => {
+    if (loading || !hasMore) return;
+    loading = true;
+    try {
+      const next = await page(rows.length);
+      rows = [...rows, ...next.entries];
+      hasMore = next.hasMore;
+
+      // Re-rendering replaces the body, so put the reader back where they were.
+      const keep = table.node.scrollTop;
+      table.setRows(rows);
+      table.node.scrollTop = keep;
+
+      describe();
+    } finally {
+      loading = false;
+    }
+  };
+
+  table.node.addEventListener('scroll', () => {
+    if (table.node.scrollTop + table.node.clientHeight >= table.node.scrollHeight - 64) loadMore();
+  });
+
+  /*
+   * On a tall window the first page may not fill the area, leaving nothing to
+   * scroll and so no way to ask for the rest. Keep pulling until it overflows
+   * or runs out; the guard is there because a page that came back empty would
+   * otherwise loop.
+   */
+  const fillList = async () => {
+    for (let guard = 0; guard < 20; guard += 1) {
+      if (!hasMore || table.node.scrollHeight > table.node.clientHeight + 4) return;
+      const before = rows.length;
+      await loadMore();
+      if (rows.length === before) return;
+    }
+  };
+
   describe();
+
+  const action = (label, iconName, extraClass, run) =>
+    button({ class: `button ${extraClass}`.trim(), onclick: run }, [icon(iconName, { size: 16 }), label]);
 
   await openSheet({
     title: product.name,
+    wide: true,
     hideConfirm: true,
-    cancelLabel: 'Close',
     body: (close) => {
       closeSheet = close;
 
+      // After layout, so clientHeight is real.
+      setTimeout(fillList, 0);
+
       return div({ class: 'sheet-fill' }, [
-        div({ class: 'summary', style: { gridTemplateColumns: '1fr 1fr' } }, [
+        div({ class: 'summary', style: { gridTemplateColumns: 'repeat(3, 1fr)' } }, [
           stat({ label: 'In stock', value: `${format.quantity(product.onHand)} ${product.unit ?? ''}`.trim() }),
           stat({ label: 'Usual price', value: format.money(product.price) }),
+          stat({ label: 'Sold', value: format.quantity(product.sold) }),
         ]),
 
-        div({ class: 'stack', style: { marginBottom: 'var(--space-5)' } }, [
-          button(
-            {
-              class: 'button button--primary button--block',
-              onclick: async () => {
-                close(null);
-                const entry = await openAddStockSheet({ api, product, format, onHand: product.onHand });
-                if (entry) {
-                  toastOk(`${format.quantity(entry.quantity)} added to ${product.name}`);
-                  await reload();
-                }
-              },
-            },
-            [icon('stock', { size: 18 }), 'Add stock']
-          ),
-          button(
-            {
-              class: 'button button--block',
-              onclick: async () => {
-                close(null);
-                if (await openEditProductSheet({ api, product, format })) {
-                  toastOk('Product updated');
-                  await reload();
-                }
-              },
-            },
-            [icon('edit', { size: 18 }), 'Edit name, unit or price']
-          ),
-          button(
-            {
-              class: 'button button--block button--danger',
-              onclick: async () => {
-                close(null);
-                const confirmed = await confirmSheet({
-                  title: `Hide ${product.name}?`,
-                  message:
-                    'It disappears from the sell and stock screens. Sales already recorded keep it, so your history stays correct.',
-                  confirmLabel: 'Hide it',
-                });
-                if (confirmed) {
-                  await api.delete(`/products/${product.id}`);
-                  toastOk(`${product.name} hidden`);
-                  await reload();
-                }
-              },
-            },
-            [icon('trash', { size: 18 }), 'Hide this product']
-          ),
+        // One row rather than three stacked blocks: these are occasional
+        // actions, and the history below them is what the sheet is for.
+        div({ class: 'sheet-actions' }, [
+          action('Add stock', 'stock', 'button--primary', async () => {
+            close(null);
+            const entry = await openAddStockSheet({ api, product, format, onHand: product.onHand });
+            if (entry) {
+              toastOk(`${format.quantity(entry.quantity)} added to ${product.name}`);
+              await reload();
+            }
+          }),
+          action('Edit', 'edit', '', async () => {
+            close(null);
+            if (await openEditProductSheet({ api, product, format })) {
+              toastOk('Product updated');
+              await reload();
+            }
+          }),
+          action('Hide', 'trash', 'button--danger', async () => {
+            close(null);
+            const confirmed = await confirmSheet({
+              title: `Hide ${product.name}?`,
+              message:
+                'It disappears from the sell and stock screens. Sales already recorded keep it, so your history stays correct.',
+              confirmLabel: 'Hide it',
+            });
+            if (confirmed) {
+              await api.delete(`/products/${product.id}`);
+              toastOk(`${product.name} hidden`);
+              await reload();
+            }
+          }),
         ]),
 
-        div({ class: 'section__head' }, [
-          div({ class: 'section__title', text: 'Stock taken in' }),
-          countLine,
-        ]),
-        first.total
-          ? div({ class: 'history-pane' }, [list, olderButton])
-          : div({ class: 'card soft', text: 'No stock has been taken in yet.' }),
+        div({ class: 'section__head' }, [div({ class: 'section__title', text: 'History' }), countLine]),
+        div({ class: 'history-pane' }, table.node),
       ]);
     },
   });
 }
-

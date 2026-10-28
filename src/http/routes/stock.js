@@ -16,9 +16,10 @@ module.exports = function registerStock(router, { inventory }) {
     payload: await inventory.addStock(body),
   }));
 
-  router.get('/stock/products/:productId/entries', ({ params, query }) =>
-    inventory.entriesFor(params.productId, {
-      limit: query.has('limit') ? validate.integer(query.get('limit'), 'limit', { min: 1, max: 200 }) : 20,
+  // Everything that moved this product: deliveries in and sales out together.
+  router.get('/stock/products/:productId/movements', ({ params, query }) =>
+    inventory.movementsFor(params.productId, {
+      limit: query.has('limit') ? validate.integer(query.get('limit'), 'limit', { min: 1, max: 200 }) : 25,
       offset: query.has('offset') ? validate.integer(query.get('offset'), 'offset', { min: 0 }) : 0,
     })
   );

@@ -73,48 +73,81 @@ describe('stock', () => {
     );
   });
 
+  test('history covers both directions: deliveries in and sales out', async () => {
+    const { services, coffee, alice } = await createShop();
+
+    await services.sales.record({ customerId: alice.id, items: [{ productId: coffee.id, quantity: 3 }] });
+
+    const { entries, total } = services.inventory.movementsFor(coffee.id);
+
+    assert.equal(total, 2, 'the opening stock and the sale');
+
+    const sale = entries.find((movement) => movement.kind === 'sold');
+    assert.equal(sale.quantity, 3);
+    assert.equal(sale.who, 'Alice', 'a sale says who took it');
+    assert.equal(sale.lineTotal, 3600);
+
+    const delivery = entries.find((movement) => movement.kind === 'in');
+    assert.equal(delivery.quantity, 20);
+    assert.equal(delivery.who, '', 'a delivery has no customer');
+  });
+
   test('hands back one page of history at a time, and says how much there is', async () => {
     const { services, coffee } = await createShop();
 
-    // 55 deliveries: more than one page, and not a round number of them.
+    // 55 movements: more than one page, and not a round number of them.
     for (let i = 0; i < 54; i += 1) {
       await services.inventory.addStock({ productId: coffee.id, quantity: 1 });
     }
 
-    const first = services.inventory.entriesFor(coffee.id);
-    assert.equal(first.entries.length, 20);
+    const first = services.inventory.movementsFor(coffee.id);
+    assert.equal(first.entries.length, 25);
     assert.equal(first.total, 55, 'the opening stock counts too');
     assert.equal(first.hasMore, true);
 
-    const second = services.inventory.entriesFor(coffee.id, { offset: 20 });
-    assert.equal(second.entries.length, 20);
+    const second = services.inventory.movementsFor(coffee.id, { offset: 25 });
+    assert.equal(second.entries.length, 25);
     assert.equal(second.hasMore, true);
 
-    const last = services.inventory.entriesFor(coffee.id, { offset: 40 });
-    assert.equal(last.entries.length, 15);
+    const last = services.inventory.movementsFor(coffee.id, { offset: 50 });
+    assert.equal(last.entries.length, 5);
     assert.equal(last.hasMore, false, 'the final page says so');
 
-    // No entry appears on two pages.
-    const ids = [...first.entries, ...second.entries, ...last.entries].map((entry) => entry.id);
+    // No movement appears on two pages.
+    const ids = [...first.entries, ...second.entries, ...last.entries].map((movement) => movement.id);
     assert.equal(new Set(ids).size, 55);
   });
 
-  test('history comes back newest first', async () => {
-    const { services, coffee } = await createShop();
+  test('history comes back newest first, whichever way it moved', async () => {
+    const { services, coffee, alice } = await createShop();
 
     await services.inventory.addStock({ productId: coffee.id, quantity: 1, at: '2026-03-01' });
-    await services.inventory.addStock({ productId: coffee.id, quantity: 2, at: '2026-03-09' });
+    await services.sales.record({
+      customerId: alice.id,
+      items: [{ productId: coffee.id, quantity: 2 }],
+      at: '2026-03-09',
+    });
     await services.inventory.addStock({ productId: coffee.id, quantity: 3, at: '2026-03-05' });
 
-    const days = services.inventory.entriesFor(coffee.id).entries.map((entry) => entry.at);
+    const days = services.inventory.movementsFor(coffee.id).entries.map((movement) => movement.at);
     assert.deepEqual(days, [...days].sort().reverse());
+  });
+
+  test("another product's movements never leak in", async () => {
+    const { services, coffee, cups, alice } = await createShop();
+
+    await services.sales.record({ customerId: alice.id, items: [{ productId: cups.id, quantity: 5 }] });
+
+    const { entries } = services.inventory.movementsFor(coffee.id);
+    assert.ok(entries.every((movement) => movement.quantity !== 5));
+    assert.equal(services.inventory.movementsFor(cups.id).total, 2);
   });
 
   test('a product with no history reports an empty page rather than failing', async () => {
     const container = createFixture();
     const product = await container.services.catalog.create({ name: 'Napkins', price: '1.00' });
 
-    assert.deepEqual(container.services.inventory.entriesFor(product.id), {
+    assert.deepEqual(container.services.inventory.movementsFor(product.id), {
       entries: [],
       total: 0,
       hasMore: false,

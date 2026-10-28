@@ -57,18 +57,47 @@ class InventoryService {
   }
 
   /**
-   * One page of a product's stock-in history, newest first.
+   * One page of everything that has moved a product, newest first: deliveries
+   * in and sales out, on a single timeline, each carrying who or why.
    *
-   * The count comes back with it: a list that silently stops at its limit is
-   * worse than a short one, because nothing says there is more behind it.
+   * Stock only makes sense as the difference between the two, so showing one
+   * without the other invites the question "sold to whom?" and then offers no
+   * way to answer it.
+   *
+   * The count comes back with it, because a list that silently stops at its
+   * limit is worse than a short one: nothing says there is more behind it.
    *
    * @returns {{entries: object[], total: number, hasMore: boolean}}
    */
-  entriesFor(productId, { limit = 20, offset = 0 } = {}) {
-    const all = this.stockEntries
+  movementsFor(productId, { limit = 25, offset = 0 } = {}) {
+    const takenIn = this.stockEntries
       .all()
       .filter((entry) => entry.productId === productId)
-      .sort(byNewest);
+      .map((entry) => ({
+        kind: 'in',
+        id: entry.id,
+        at: entry.at,
+        quantity: entry.quantity,
+        who: '',
+        note: entry.note ?? '',
+      }));
+
+    const sold = this.saleReader.all().flatMap((sale) =>
+      sale.items
+        .filter((item) => item.productId === productId)
+        .map((item) => ({
+          kind: 'sold',
+          id: sale.id,
+          at: sale.at,
+          quantity: item.quantity,
+          who: sale.customerName,
+          note: sale.note ?? '',
+          unitPrice: item.unitPrice,
+          lineTotal: item.lineTotal,
+        }))
+    );
+
+    const all = [...takenIn, ...sold].sort(byNewest);
 
     return {
       entries: all.slice(offset, offset + limit),

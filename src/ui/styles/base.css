@@ -61,6 +61,15 @@ button {
   color: inherit;
 }
 
+/*
+ * Components that set their own `display` otherwise beat the browser's default
+ * rule for [hidden], leaving an element that reports itself as hidden while
+ * still sitting on the screen.
+ */
+[hidden] {
+  display: none !important;
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

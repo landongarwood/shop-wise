@@ -68,10 +68,14 @@ export function openSheet({
         ),
       ]),
       div({ class: 'sheet__body' }, content),
-      div({ class: 'sheet__foot' }, [
-        button({ class: 'button', text: cancelLabel, onclick: () => finish(null) }),
-        hideConfirm ? null : confirm,
-      ]),
+      // A sheet with nothing to confirm needs no footer: the X in the corner
+      // already closes it, and a second Close button is one more thing to read.
+      hideConfirm
+        ? null
+        : div({ class: 'sheet__foot' }, [
+            button({ class: 'button', text: cancelLabel, onclick: () => finish(null) }),
+            confirm,
+          ]),
     ]);
 
     const backdrop = div({
