@@ -158,6 +158,7 @@ async function msi() {
       `-dStageDir=${stageDir}`,
       `-dProductName=${pkg.productName}`,
       `-dProductVersion=${msiVersion(pkg.version)}`,
+      `-dIconFile=${path.join(repoRoot, 'assets', 'shopwise.ico')}`,
       '-out', objDir + path.sep,
       path.join(wxsDir, 'ShopWise.wxs'),
       filesWxs,

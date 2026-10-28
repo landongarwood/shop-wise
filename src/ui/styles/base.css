@@ -16,8 +16,9 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-text);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.5;
+  letter-spacing: -0.005em;
   overflow: hidden;
 
   /* A desktop app, not a document: text should not be selectable by accident,
@@ -28,6 +29,7 @@ body {
 
 input,
 textarea,
+select,
 [contenteditable] {
   -webkit-user-select: text;
   user-select: text;
@@ -38,8 +40,8 @@ h2,
 h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.012em;
+  font-weight: 650;
+  letter-spacing: -0.02em;
 }
 
 h1 {
@@ -47,7 +49,7 @@ h1 {
 }
 
 h2 {
-  font-size: 17px;
+  font-size: 16px;
 }
 
 p {
@@ -80,25 +82,33 @@ button {
 }
 
 /*
- * The header is a hairline under open content rather than a panel sitting on
- * top of it: one rule, no fill, no shadow.
+ * The header is lifted off the page rather than ruled off it: a faint wash of
+ * the accent fading into the background, and a soft shadow underneath. A hard
+ * line across the window is the bluntest way to say "this part is separate",
+ * and it reads as unfinished.
  */
 .appbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-4);
   flex: 0 0 auto;
   min-height: var(--appbar-height);
   padding: var(--space-2) var(--gutter);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  background: linear-gradient(180deg, var(--accent-wash) 0%, var(--bg) 100%);
+  box-shadow: 0 1px 2px rgb(9 9 11 / 4%), 0 8px 24px -16px rgb(9 9 11 / 24%);
+  z-index: 10;
+}
+
+:root[data-theme='dark'] .appbar {
+  box-shadow: 0 1px 0 rgb(255 255 255 / 5%), 0 10px 28px -18px rgb(0 0 0 / 90%);
 }
 
 .screen {
   flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: clamp(18px, 2.5vw, 34px) var(--gutter) clamp(48px, 7vw, 84px);
+  padding: clamp(20px, 2.6vw, 34px) var(--gutter) clamp(48px, 7vw, 84px);
 }
 
 .screen:focus {

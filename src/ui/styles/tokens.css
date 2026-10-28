@@ -1,66 +1,71 @@
 /*
  * Design tokens.
  *
- * Every colour, space, size and radius used anywhere in the app is named here,
- * and dark mode is nothing more than a second set of values for the same names.
- * No component hard-codes a colour, so the two themes cannot drift apart.
+ * Every colour, size and radius in the app is named here, and dark mode is a
+ * second set of values for the same names, so the two themes cannot drift.
  *
- * The palette is a neutral ramp with deliberate steps, chosen so that each pair
- * that has to be told apart actually can be: body text at 4.5:1 or better
- * against every surface it sits on, control outlines and status colours at 3:1,
- * and dividers far enough from their background to be seen. The steps are not a
- * matter of taste — test/ui/contrast.test.js measures them.
+ * The neutrals are a true grey ramp with no blue in them. A tinted page is what
+ * makes an interface look like a generic admin template: the page is white, and
+ * depth comes from hairlines and a little elevation rather than from washing
+ * everything in grey. Panels sit at the same value as the page and are read by
+ * their border, which is how the crisper products do it.
  *
- * Sizes that should follow the window use clamp(min, preferred, max), so the
- * layout breathes with the window instead of snapping at a few breakpoints.
+ * What text and status colours have to survive is measured, not judged — see
+ * test/ui/contrast.test.js.
  */
 
 :root {
-  /* Surfaces, from furthest back to nearest front. Each step is big enough to
-     be seen, which is what makes a button look like a button. */
-  --bg: #f1f4f8;
+  /* Neutrals. White page; greys are for fills and lines, not for the backdrop. */
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-sunken: #e2e8f0;
-  --surface-hover: #d5dde8;
-  --border: #c3ccd9;
-  --border-strong: #78859a;
+  --surface-sunken: #f4f4f5;
+  --surface-hover: #f4f4f5;
+  --surface-active: #e9e9ec;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
 
-  /* Text. */
-  --text: #0f1319;
-  --text-soft: #46526a;
-  --text-faint: #5d6880;
+  --text: #09090b;
+  --text-soft: #52525b;
+  --text-faint: #70707a;
 
-  /* The one accent, for the action the user most likely wants. */
-  --accent: #1b4fd1;
-  --accent-hover: #1743b4;
+  /* One accent, for the action most likely wanted. */
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
   --accent-text: #ffffff;
-  --accent-soft: #dfe8fc;
+  --accent-soft: #eef2ff;
+  --accent-bright: #6366f1;
+  --accent-wash: #f5f3ff;
+  --focus-ring: rgb(79 70 229 / 22%);
 
   /* Money has a direction: owed to the shop, or paid to the shop. */
-  --debt: #b02318;
-  --debt-soft: #fbe5e3;
-  --paid: #046c3d;
-  --paid-soft: #daefe4;
-  --warn: #9c4209;
-  --warn-soft: #fbeade;
+  --debt: #b91c1c;
+  --debt-soft: #fef2f2;
+  --paid: #15803d;
+  --paid-soft: #f0fdf4;
+  --warn: #b45309;
+  --warn-soft: #fffbeb;
 
   /*
-   * Notifications are solid and saturated rather than tinted: they appear for a
-   * few seconds over whatever the user is doing, so they have to be recognised
-   * at a glance and by colour alone. The same values serve both themes, so the
-   * white label is guaranteed to be readable either way.
+   * Notifications are solid and saturated: they sit over whatever the user is
+   * doing for a few seconds, so colour has to carry the meaning before the
+   * words are read. The same values serve both themes, which guarantees the
+   * white label stays readable either way.
    */
-  --notice-ok: #07653c;
-  --notice-warn: #8d3f08;
-  --notice-error: #a21d14;
+  --notice-ok: #15803d;
+  --notice-warn: #b45309;
+  --notice-error: #b91c1c;
   --notice-text: #ffffff;
 
-  --shadow-float: 0 10px 30px rgb(15 23 42 / 16%), 0 2px 6px rgb(15 23 42 / 10%);
-  --shadow-high: 0 20px 44px rgb(15 23 42 / 20%), 0 4px 12px rgb(15 23 42 / 12%);
+  /* Elevation, kept shallow. A crisp edge does more than a soft blur. */
+  --shadow-sm: 0 1px 2px rgb(9 9 11 / 6%);
+  --shadow-md: 0 4px 12px rgb(9 9 11 / 8%), 0 1px 3px rgb(9 9 11 / 6%);
+  --shadow-lg: 0 16px 48px rgb(9 9 11 / 16%), 0 4px 12px rgb(9 9 11 / 8%);
 
+  /* Generously rounded: the app should feel friendly rather than clinical. */
   --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-pill: 999px;
 
   --space-1: 4px;
@@ -68,56 +73,63 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 22px;
-  --space-6: 30px;
-  --space-7: 44px;
+  --space-6: 32px;
+  --space-7: 48px;
 
   /* Nothing a finger or an unsteady hand must hit is smaller than this. */
-  --tap-min: 52px;
-  --tap-big: 66px;
+  --tap-min: 44px;
+  --tap-big: 56px;
 
-  --font-text: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --font-display: 'Segoe UI Variable Display', 'Segoe UI Semibold', 'Segoe UI', system-ui, sans-serif;
+  --font-text: 'Segoe UI Variable Text', 'Segoe UI', Inter, system-ui, -apple-system, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI Semibold', 'Segoe UI', Inter, system-ui, sans-serif;
 
   /* Fluid layout. */
-  --gutter: clamp(16px, 3.5vw, 44px);
+  --gutter: clamp(16px, 3.5vw, 40px);
   --content-max: 1600px;
-  --appbar-height: clamp(56px, 7vh, 68px);
+  --appbar-height: clamp(56px, 7vh, 64px);
 
   /* Fluid type. */
-  --size-title: clamp(18px, 1.4vw + 14px, 24px);
-  --size-tile: clamp(19px, 1.2vw + 15px, 24px);
-  --size-figure: clamp(26px, 2.4vw + 16px, 40px);
-  --size-headline: clamp(34px, 4vw + 18px, 58px);
+  --size-title: clamp(17px, 1.1vw + 14px, 21px);
+  --size-tile: clamp(17px, 0.9vw + 14px, 21px);
+  --size-figure: clamp(24px, 2vw + 15px, 34px);
+  --size-headline: clamp(32px, 3.4vw + 18px, 50px);
 
-  --transition: 150ms cubic-bezier(0.2, 0, 0.2, 1);
+  --transition: 140ms cubic-bezier(0.2, 0, 0.2, 1);
 }
 
 :root[data-theme='dark'] {
-  /* Not near-black: a dark interface still needs room for surfaces to step up
-     out of the page, or every control sinks into the background. */
-  --bg: #0b0e13;
-  --surface: #161b24;
-  --surface-sunken: #1f2632;
-  --surface-hover: #2a323f;
-  --border: #39424f;
-  --border-strong: #6b7788;
+  /*
+   * Neutral and deep rather than blue-black, with each surface a clear step up
+   * from the page so controls sit on it instead of sinking into it.
+   */
+  --bg: #09090b;
+  --surface: #111113;
+  --surface-sunken: #18181b;
+  --surface-hover: #1f1f23;
+  --surface-active: #27272a;
+  --border: #27272a;
+  --border-strong: #3f3f46;
 
-  --text: #e9edf4;
-  --text-soft: #adb8c9;
-  --text-faint: #8d98ab;
+  --text: #fafafa;
+  --text-soft: #a1a1aa;
+  --text-faint: #8b8b94;
 
-  --accent: #6c95ff;
-  --accent-hover: #86a9ff;
-  --accent-text: #06101f;
-  --accent-soft: #1c2a4a;
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-text: #1e1b4b;
+  --accent-soft: #1e1b4b;
+  --accent-bright: #a5b4fc;
+  --accent-wash: #15131f;
+  --focus-ring: rgb(129 140 248 / 28%);
 
-  --debt: #ff8d82;
-  --debt-soft: #2f1613;
-  --paid: #4fd18b;
-  --paid-soft: #0f2b1e;
-  --warn: #f7bc4d;
-  --warn-soft: #2d2110;
+  --debt: #f87171;
+  --debt-soft: #2a1212;
+  --paid: #4ade80;
+  --paid-soft: #0d2818;
+  --warn: #fbbf24;
+  --warn-soft: #2a1f08;
 
-  --shadow-float: 0 10px 30px rgb(0 0 0 / 55%);
-  --shadow-high: 0 22px 48px rgb(0 0 0 / 66%);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 50%);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 55%);
+  --shadow-lg: 0 20px 52px rgb(0 0 0 / 70%);
 }

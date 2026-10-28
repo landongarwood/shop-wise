@@ -84,7 +84,11 @@ describe('the UI module graph', () => {
 
       assert.equal(response.status, 200, `${reference} returned ${response.status}`);
 
-      const expected = reference.endsWith('.css') ? 'text/css' : 'text/javascript';
+      const expected = reference.endsWith('.css')
+        ? 'text/css'
+        : reference.endsWith('.svg')
+          ? 'image/svg'
+          : 'text/javascript';
       assert.match(response.headers.get('content-type'), new RegExp(expected), `wrong type for ${reference}`);
     }
   });

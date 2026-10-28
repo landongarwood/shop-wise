@@ -105,6 +105,30 @@ WebSocket is enough.
 UI has no bundler: it walks every import from `index.html` and insists each file
 exists and is served, since otherwise a typo'd path shows up as a blank window.
 
+## Look and feel
+
+The light theme is a white page with true neutral greys — a tinted page is what
+makes an interface read as a generic admin template. Depth comes from hairlines
+and shallow elevation rather than from washing everything in grey, and panels
+sit at the same value as the page and are read by their border. Dark mode is
+neutral and deep rather than blue-black, with each surface a clear step up from
+the page so controls sit on it instead of sinking into it.
+
+Colour is reserved: one indigo accent for the action most likely wanted, and
+red/green/amber only for money going the wrong way, being paid, or stock
+running out. [test/ui/contrast.test.js](test/ui/contrast.test.js) measures every
+pair in both themes, grouped by what the ratio has to buy — 4.5:1 for text,
+3:1 for anything carrying meaning by colour alone, lower bars for outlines and
+dividers, which is roughly where shipping products sit.
+
+The mark is a cup whose steam rises as three bars: the cafe and the takings in
+one shape, drawn so it still reads at 16px.
+[src/ui/assets/logo.svg](src/ui/assets/logo.svg) is the single source — it is
+the favicon (and so the taskbar icon, since the window is an Edge app window),
+the header brand, and the input to `npm run icon`, which renders it through
+headless Edge at nine sizes and assembles `assets/shopwise.ico` for the
+installer's shortcuts and the Apps & features entry.
+
 ## Building the installer
 
 The MSI needs the WiX toolset — a folder of executables that run on the .NET
@@ -112,6 +136,7 @@ Framework already in Windows. No .NET SDK, no Visual Studio.
 
 ```sh
 npm run tools:wix  # one-time: downloads WiX v3 into ./tools (gitignored)
+npm run icon       # re-render assets/shopwise.ico from the logo
 npm run msi        # -> dist/ShopWise-<version>-x64.msi
 npm run build      # stage ./stage only, skip the MSI
 ```

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ShopWise">
+  <!--
+    A cup whose steam rises as three bars: the cafe and the takings in one
+    mark. Thick rounded shapes so it still reads at 16px in a taskbar, and
+    only two colours over the badge so it survives being shrunk.
+  -->
+  <defs>
+    <linearGradient id="sw-badge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c7bf5" />
+      <stop offset="1" stop-color="#4f46e5" />
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="16" fill="url(#sw-badge)" />
+
+  <!-- steam, rising like a takings chart -->
+  <rect x="20" y="17" width="6" height="10" rx="3" fill="#fcd34d" />
+  <rect x="29" y="12" width="6" height="15" rx="3" fill="#fbbf24" />
+  <rect x="38" y="7" width="6" height="20" rx="3" fill="#f59e0b" />
+
+  <!-- cup -->
+  <path d="M15 33h29v8a13 13 0 0 1-13 13h-3a13 13 0 0 1-13-13v-8z" fill="#ffffff" />
+  <path d="M45 36h3.5a5.5 5.5 0 0 1 0 11H45" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" />
+
+  <!-- saucer -->
+  <rect x="11" y="55" width="37" height="4.5" rx="2.25" fill="#ffffff" opacity="0.9" />
+</svg>

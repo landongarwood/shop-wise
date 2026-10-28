@@ -28,6 +28,10 @@
 
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
+    <!-- The shortcuts and the Apps & features entry all use the one icon. -->
+    <Icon Id="ShopWise.ico" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="ShopWise.ico" />
+
     <!-- 64-bit Windows 8.1 or newer, so the bundled Node runtime and the Edge
          WebView engine are both supported. -->
     <Condition Message="$(var.ProductName) requires 64-bit Windows 8.1 or later.">
@@ -58,7 +62,8 @@
             Description="Open $(var.ProductName)"
             Target="[INSTALLFOLDER]$(var.ProductName).exe"
             Arguments="&quot;[INSTALLFOLDER]src\main.js&quot;"
-            WorkingDirectory="INSTALLFOLDER" />
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="ShopWise.ico" />
 
         <RegistryValue
             Root="HKCU"
@@ -78,7 +83,8 @@
             Description="Open $(var.ProductName)"
             Target="[INSTALLFOLDER]$(var.ProductName).exe"
             Arguments="&quot;[INSTALLFOLDER]src\main.js&quot;"
-            WorkingDirectory="INSTALLFOLDER" />
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="ShopWise.ico" />
 
         <RegistryValue
             Root="HKCU"

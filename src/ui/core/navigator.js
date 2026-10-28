@@ -1,4 +1,4 @@
-import { div, button, append, clear, h1 } from './dom.js';
+import { div, button, append, clear, h1, el } from './dom.js';
 import { icon } from './icons.js';
 
 /**
@@ -104,9 +104,11 @@ export class Navigator {
       canGoBack
         ? button(
             { class: 'appbar__back', ariaLabel: 'Back', onclick: () => this.back() },
-            icon('back', { size: 20 })
+            icon('back', { size: 18 })
           )
-        : null,
+        : // At the root there is nowhere to go back to, so the mark sits there
+          // instead and the header is never left with a bare title.
+          div({ class: 'appbar__brand' }, el('img', { src: '/assets/logo.svg', alt: '', width: 36, height: 36 })),
 
       div({ class: 'appbar__titles' }, [
         h1({ class: 'appbar__title', text: screen.title }),

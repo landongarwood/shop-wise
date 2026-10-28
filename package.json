@@ -15,6 +15,7 @@
     "serve": "node src/main.js --no-window",
     "build": "node build/build.js",
     "msi": "node build/build.js --msi",
+    "icon": "node build/make-icon.js",
     "tools:wix": "node build/fetch-wix.js",
     "test": "node --test \"test/**/*.test.js\"",
     "test:e2e": "node test/e2e/flows.js",

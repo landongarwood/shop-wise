@@ -1,10 +1,10 @@
 /*
  * Components.
  *
- * Open layout rather than boxes: separation comes from space and hairlines, not
- * from outlining every group in a rounded rectangle. The only things that carry
- * a filled surface are the ones you press, and the only things that float are
- * the ones that genuinely sit above the page — the sheet and the notifications.
+ * The look: a white page, true neutral greys, generous rounding and shallow
+ * elevation. Things you press have an edge and lift slightly; things that only
+ * hold content are separated by space and a hairline. Colour is reserved for
+ * the one primary action and for money going the wrong way.
  *
  * Everything sizes from the fluid tokens, so the same screen works in a narrow
  * window and on a wide monitor without a sidebar or a fixed column.
@@ -12,23 +12,42 @@
 
 /* ---------- appbar ---------- */
 
+.appbar__brand {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+}
+
+.appbar__brand img {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgb(79 70 229 / 28%));
+}
+
 .appbar__back {
   display: inline-grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   flex: 0 0 auto;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border-color var(--transition), transform var(--transition);
 }
 
 .appbar__back:hover {
-  background: var(--surface-hover);
-  color: var(--text);
+  background: var(--surface-sunken);
+  border-color: var(--text-faint);
+}
+
+.appbar__back:active {
+  transform: translateY(1px);
 }
 
 .appbar__titles {
@@ -59,18 +78,19 @@
 .icon-button {
   display: inline-grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
-  border: 0;
+  width: 38px;
+  height: 38px;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-soft);
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
 }
 
 .icon-button:hover {
-  background: var(--surface-hover);
+  border-color: var(--border);
+  background: var(--surface-sunken);
   color: var(--text);
 }
 
@@ -82,15 +102,17 @@
   justify-content: center;
   gap: var(--space-2);
   min-height: var(--tap-min);
-  padding: 0 var(--space-5);
+  padding: 0 var(--space-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition), transform var(--transition);
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border-color var(--transition), transform var(--transition),
+    box-shadow var(--transition);
 }
 
 .button:hover:not(:disabled) {
@@ -100,17 +122,20 @@
 
 .button:active:not(:disabled) {
   transform: translateY(1px);
+  box-shadow: none;
 }
 
 .button:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .button--primary {
   border-color: transparent;
   background: var(--accent);
   color: var(--accent-text);
+  box-shadow: 0 1px 2px rgb(79 70 229 / 30%), 0 6px 16px -8px rgb(79 70 229 / 50%);
 }
 
 .button--primary:hover:not(:disabled) {
@@ -122,6 +147,7 @@
   border-color: transparent;
   background: var(--debt-soft);
   color: var(--debt);
+  box-shadow: none;
 }
 
 .button--quiet {
@@ -129,11 +155,12 @@
   background: transparent;
   color: var(--text-soft);
   font-weight: 500;
+  box-shadow: none;
 }
 
 .button--quiet:hover:not(:disabled) {
   border-color: transparent;
-  background: var(--surface-hover);
+  background: var(--surface-sunken);
   color: var(--text);
 }
 
@@ -146,16 +173,16 @@
   min-height: var(--tap-big);
   border-radius: var(--radius-lg);
   font-family: var(--font-display);
-  font-size: clamp(17px, 0.6vw + 15px, 20px);
+  font-size: clamp(16px, 0.5vw + 14px, 18px);
 }
 
 /* ---------- action tiles ---------- */
 
 .tiles {
   display: grid;
-  gap: clamp(10px, 1.2vw, 18px);
+  gap: clamp(10px, 1.1vw, 16px);
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
-  margin-bottom: clamp(14px, 1.8vw, 26px);
+  margin-bottom: clamp(14px, 1.6vw, 22px);
 }
 
 .tile {
@@ -163,102 +190,114 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
-  min-height: clamp(126px, 15vh, 168px);
-  padding: clamp(16px, 1.8vw, 26px);
+  min-height: clamp(120px, 14vh, 158px);
+  padding: clamp(16px, 1.6vw, 22px);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--surface);
   color: inherit;
   cursor: pointer;
   text-align: left;
-  transition: background var(--transition), transform var(--transition);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
 }
 
 .tile:hover {
-  background: var(--surface-hover);
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
 }
 
 .tile:active {
-  transform: translateY(1px);
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
 }
 
 .tile__icon {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-md);
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-lg);
   background: var(--accent-soft);
   color: var(--accent);
 }
 
 .tile--primary {
   border-color: transparent;
-  background: var(--accent);
+  background: linear-gradient(140deg, var(--accent-bright) 0%, var(--accent) 100%);
   color: var(--accent-text);
+  box-shadow: 0 2px 4px rgb(79 70 229 / 26%), 0 14px 30px -14px rgb(79 70 229 / 60%);
 }
 
 .tile--primary:hover {
-  background: var(--accent-hover);
+  border-color: transparent;
+  box-shadow: 0 3px 6px rgb(79 70 229 / 30%), 0 18px 36px -14px rgb(79 70 229 / 66%);
 }
 
 .tile--primary .tile__icon {
-  background: rgb(255 255 255 / 20%);
+  background: rgb(255 255 255 / 22%);
   color: var(--accent-text);
 }
 
 .tile__label {
   font-family: var(--font-display);
   font-size: var(--size-tile);
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .tile__hint {
   color: var(--text-soft);
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.35;
 }
 
 .tile--primary .tile__hint {
-  color: rgb(255 255 255 / 82%);
+  color: rgb(255 255 255 / 86%);
+}
+
+:root[data-theme='dark'] .tile--primary .tile__hint {
+  color: rgb(30 27 75 / 82%);
 }
 
 /* ---------- figures ---------- */
 
 /*
- * Plain figures in a row, held apart by space and a hairline above. Nothing is
- * boxed: on a report the numbers *are* the content and do not need framing.
+ * Plain figures in a row, held apart by space. Nothing is boxed: on a report
+ * the numbers are the content and do not need framing.
  */
 .summary {
   display: grid;
-  gap: clamp(14px, 2.5vw, 38px);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
-  padding: clamp(14px, 1.6vw, 22px) 0 clamp(18px, 2vw, 28px);
-  margin-bottom: clamp(6px, 1vw, 14px);
+  gap: clamp(14px, 2.2vw, 34px);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr));
+  padding: clamp(12px, 1.4vw, 18px) 0 clamp(16px, 1.8vw, 24px);
+  margin-bottom: clamp(4px, 0.8vw, 10px);
   border-bottom: 1px solid var(--border);
 }
 
 .stat__label {
   color: var(--text-soft);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 650;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
 }
 
 .stat__value {
-  margin-top: 2px;
+  margin-top: 3px;
   font-family: var(--font-display);
   font-size: var(--size-figure);
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1.1;
+  letter-spacing: -0.03em;
 }
 
 .stat__hint {
   margin-top: 2px;
   color: var(--text-faint);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .stat--debt .stat__value {
@@ -276,7 +315,7 @@
 /* ---------- sections ---------- */
 
 .section {
-  margin-bottom: clamp(18px, 2.4vw, 32px);
+  margin-bottom: clamp(18px, 2.2vw, 30px);
 }
 
 .section__head {
@@ -291,18 +330,38 @@
 
 .section__title {
   color: var(--text-soft);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 650;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
 }
 
-/* A flat panel, used where content genuinely needs a quiet backdrop. */
 .card {
-  padding: clamp(16px, 1.8vw, 24px);
+  padding: clamp(16px, 1.6vw, 22px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
+}
+
+/* ---------- toolbar ---------- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.toolbar__search {
+  flex: 1 1 260px;
+  min-width: 180px;
+}
+
+.toolbar__field {
+  flex: 1 1 190px;
+  min-width: 150px;
+  max-width: 280px;
 }
 
 /* ---------- product picker ---------- */
@@ -310,8 +369,7 @@
 /*
  * A shop can carry hundreds of products, so this is a list with a search box
  * rather than a grid of tiles. The rows scroll inside their own area so the
- * running total and the save button never get pushed off the screen, however
- * long the catalogue is.
+ * running total and the save button never get pushed off the screen.
  */
 
 .picker__head {
@@ -327,10 +385,10 @@
 .picker__count {
   padding-bottom: var(--space-2);
   color: var(--text-faint);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 650;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
 }
 
 .picker__rows {
@@ -347,10 +405,6 @@
 
 /* ---------- list rows ---------- */
 
-/*
- * A list is rows with hairlines between them — no surrounding border, no
- * rounded container. The whole row is the target.
- */
 .rows {
   display: flex;
   flex-direction: column;
@@ -359,10 +413,10 @@
 .row {
   display: flex;
   align-items: center;
-  gap: clamp(10px, 1.5vw, 20px);
+  gap: clamp(10px, 1.4vw, 18px);
   width: 100%;
-  min-height: 46px;
-  padding: var(--space-2);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-3);
   border: 0;
   border-bottom: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -374,7 +428,7 @@
 }
 
 .row:hover {
-  background: var(--surface-hover);
+  background: var(--surface-sunken);
 }
 
 .row--static {
@@ -400,7 +454,7 @@
 
 .row__sub {
   color: var(--text-soft);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .row__end {
@@ -409,28 +463,26 @@
 }
 
 .row__amount {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15.5px;
+  font-weight: 650;
 }
 
 /* ---------- data table ---------- */
 
 /*
- * Figures are what the stock, customer and sales screens are for, so they use a
- * real table: columns that read down, numbers right-aligned on tabular figures
- * so the digits line up, and a header that stays put while hundreds of rows
- * scroll under it.
- *
- * Rows are sized to be comfortably scannable rather than as tight as possible —
- * a row you can land on is worth more than one more row on screen. Separation
- * is a single hairline, with the hover tint doing the work of picking a row
- * out; banding as well would be two devices for one job.
+ * Columns that read down, numbers right-aligned on tabular figures so the
+ * digits line up, and a header that stays put while hundreds of rows scroll
+ * under it. Rows are sized to be comfortably landed on rather than as tight as
+ * possible, and separation is a single hairline with the hover tint picking a
+ * row out.
  */
 
 .table-wrap {
   width: 100%;
   overflow-x: auto;
-  border-top: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
 }
 
 .table-wrap--scroll {
@@ -442,20 +494,20 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14.5px;
+  font-size: 14px;
 }
 
 .table th {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 11px var(--space-4) 10px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border-strong);
-  color: var(--text-faint);
+  padding: 10px var(--space-4);
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-soft);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   text-align: left;
   white-space: nowrap;
@@ -468,6 +520,7 @@
 
 .table__th--sortable:hover {
   color: var(--text);
+  background: var(--surface-active);
 }
 
 .table__th--active {
@@ -481,21 +534,10 @@
 }
 
 .table td {
-  padding: 10px var(--space-4);
+  padding: 11px var(--space-4);
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   white-space: nowrap;
-}
-
-/* The outer columns line up with the page rather than sitting inside a box. */
-.table th:first-child,
-.table td:first-child {
-  padding-left: var(--space-3);
-}
-
-.table th:last-child,
-.table td:last-child {
-  padding-right: var(--space-3);
 }
 
 /* A list should end on content, not on a rule. */
@@ -504,7 +546,7 @@
 }
 
 .table tbody tr:hover {
-  background: var(--surface-hover);
+  background: var(--surface-sunken);
 }
 
 .table__row--click {
@@ -518,11 +560,11 @@
 }
 
 .table__strong {
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .table__empty td {
-  padding: var(--space-6) var(--space-3);
+  padding: var(--space-6) var(--space-4);
   text-align: center;
 }
 
@@ -532,10 +574,9 @@
 
 .table__sub {
   color: var(--text-faint);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
-/* A compact trailing action, e.g. "+ Add" on every stock row. */
 /* Sized so it does not set the row height; the text does. */
 .table__action {
   min-height: 28px;
@@ -544,10 +585,11 @@
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 650;
   cursor: pointer;
   white-space: nowrap;
+  transition: background var(--transition), color var(--transition);
 }
 
 .table__action:hover {
@@ -563,6 +605,7 @@
   height: 9px;
   border-radius: var(--radius-pill);
   background: var(--text-faint);
+  box-shadow: 0 0 0 3px rgb(9 9 11 / 4%);
 }
 
 .dot--ok {
@@ -581,50 +624,6 @@
   background: var(--border-strong);
 }
 
-/* ---------- toolbar ---------- */
-
-/*
- * The row of controls that narrows a table: a search box or a couple of
- * choosers, the filter chips, and the button that adds a new record. It wraps
- * rather than scrolling, so a narrow window stacks it instead of hiding half.
- */
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-3);
-}
-
-.toolbar__search {
-  flex: 1 1 260px;
-  min-width: 180px;
-}
-
-.toolbar__search .input {
-  min-height: 42px;
-  font-size: 15px;
-}
-
-.input--search {
-  min-height: 42px;
-  font-size: 15px;
-}
-
-.toolbar__field {
-  flex: 1 1 190px;
-  min-width: 150px;
-  max-width: 280px;
-}
-
-/* A native select, so hundreds of products stay type-ahead searchable. */
-.input--select {
-  min-height: 42px;
-  padding: 0 var(--space-3);
-  font-size: 15px;
-  cursor: pointer;
-}
-
 /* ---------- badges ---------- */
 
 .badge {
@@ -633,8 +632,8 @@
   gap: var(--space-1);
   padding: 4px 11px;
   border-radius: var(--radius-pill);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 650;
   white-space: nowrap;
 }
 
@@ -668,36 +667,47 @@
 .field__label {
   display: block;
   margin-bottom: var(--space-2);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13.5px;
+  font-weight: 650;
 }
 
 .field__hint {
   margin-top: var(--space-2);
   color: var(--text-soft);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .input {
   width: 100%;
   min-height: var(--tap-min);
-  padding: 0 var(--space-4);
+  padding: 0 var(--space-3);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
   font-family: inherit;
-  font-size: 17px;
+  font-size: 15px;
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 
 .input:focus {
   border-color: var(--accent);
-  outline: 2px solid var(--accent-soft);
-  outline-offset: 0;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .input::placeholder {
   color: var(--text-faint);
+}
+
+.input--search,
+.input--select {
+  min-height: 42px;
+  font-size: 14.5px;
+}
+
+.input--select {
+  cursor: pointer;
 }
 
 /* Amounts are the thing being checked, so they are set large. */
@@ -705,8 +715,9 @@
   min-height: var(--tap-big);
   font-family: var(--font-display);
   font-size: var(--size-figure);
-  font-weight: 600;
+  font-weight: 650;
   text-align: right;
+  letter-spacing: -0.02em;
 }
 
 .chips {
@@ -716,16 +727,16 @@
 }
 
 .chip {
-  min-height: 40px;
+  min-height: 38px;
   padding: 0 var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--text-soft);
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
 }
 
 .chip:hover {
@@ -740,11 +751,12 @@
   border-color: transparent;
   background: var(--accent);
   color: var(--accent-text);
+  box-shadow: 0 1px 2px rgb(79 70 229 / 30%);
 }
 
 .chip__count {
   margin-left: 6px;
-  opacity: 0.75;
+  opacity: 0.72;
   font-variant-numeric: tabular-nums;
 }
 
@@ -764,15 +776,17 @@
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
-  transition: background var(--transition);
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border-color var(--transition);
 }
 
 .stepper__button:hover {
-  background: var(--surface-hover);
+  background: var(--surface-sunken);
+  border-color: var(--accent);
 }
 
 .stepper__input {
@@ -786,13 +800,15 @@
   color: var(--text);
   font-family: var(--font-display);
   font-size: var(--size-figure);
-  font-weight: 600;
+  font-weight: 650;
   text-align: center;
+  letter-spacing: -0.02em;
 }
 
 .stepper__input:focus {
   border-color: var(--accent);
-  outline: 2px solid var(--accent-soft);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* ---------- running sale ---------- */
@@ -800,9 +816,9 @@
 .cart {
   position: sticky;
   bottom: 0;
-  margin-top: clamp(16px, 2vw, 26px);
+  margin-top: clamp(16px, 1.8vw, 24px);
   padding-top: var(--space-4);
-  background: linear-gradient(to bottom, transparent, var(--bg) 38%);
+  background: linear-gradient(to bottom, transparent, var(--bg) 36%);
 }
 
 .cart__total {
@@ -810,24 +826,26 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-2) var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-3);
-  border-top: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
 }
 
 .cart__total-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 650;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--text-soft);
 }
 
 .cart__total-value {
   font-family: var(--font-display);
   font-size: var(--size-headline);
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1;
+  letter-spacing: -0.03em;
 }
 
 /* ---------- empty state ---------- */
@@ -837,8 +855,8 @@
   gap: var(--space-4);
   justify-items: center;
   padding: clamp(34px, 7vw, 76px) var(--space-5);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-xl);
   background: var(--surface);
   text-align: center;
   color: var(--text-soft);
@@ -846,8 +864,9 @@
 
 .empty__title {
   font-family: var(--font-display);
-  font-size: clamp(18px, 1vw + 15px, 22px);
-  font-weight: 600;
+  font-size: clamp(17px, 0.8vw + 14px, 20px);
+  font-weight: 650;
+  letter-spacing: -0.02em;
   color: var(--text);
 }
 
@@ -859,7 +878,8 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: rgb(8 10 14 / 48%);
+  background: rgb(9 9 11 / 44%);
+  backdrop-filter: blur(2px);
   z-index: 50;
   animation: fade-in var(--transition);
 }
@@ -871,9 +891,9 @@
   max-width: min(520px, 100%);
   max-height: min(88vh, 780px);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--surface);
-  box-shadow: var(--shadow-high);
+  box-shadow: var(--shadow-lg);
   animation: rise var(--transition);
   overflow: hidden;
 }
@@ -892,8 +912,9 @@
 
 .sheet__title {
   font-family: var(--font-display);
-  font-size: 19px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
 }
 
 .sheet__body {
@@ -915,13 +936,13 @@
 /* ---------- notifications ---------- */
 
 /*
- * Top right, under the header, in solid colour: green saved, amber worth
- * noticing, red went wrong. They appear over whatever the user is looking at,
- * so colour has to carry the meaning before any of the words are read.
+ * Top right, in solid colour: green saved, amber worth noticing, red went
+ * wrong. They appear over whatever the user is looking at, so colour has to
+ * carry the meaning before any of the words are read.
  */
 .toast-root {
   position: fixed;
-  top: calc(var(--appbar-height) + 10px);
+  top: calc(var(--appbar-height) + 12px);
   right: var(--gutter);
   display: flex;
   flex-direction: column;
@@ -935,14 +956,14 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--notice-ok);
   color: var(--notice-text);
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 600;
   line-height: 1.35;
   text-align: left;
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--shadow-lg);
   cursor: pointer;
   animation: slide-in-right 200ms cubic-bezier(0.2, 0, 0.2, 1);
 }
@@ -958,12 +979,12 @@
 .toast__icon {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   flex: 0 0 auto;
   margin-top: 1px;
   border-radius: var(--radius-pill);
-  background: rgb(255 255 255 / 22%);
+  background: rgb(255 255 255 / 24%);
 }
 
 .toast__message {
@@ -985,19 +1006,19 @@
 .event {
   display: flex;
   align-items: center;
-  gap: clamp(10px, 1.5vw, 20px);
-  padding: var(--space-3) var(--space-2);
+  gap: clamp(10px, 1.4vw, 18px);
+  padding: var(--space-3);
   border-bottom: 1px solid var(--border);
 }
 
 .event__mark {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
   border-radius: var(--radius-pill);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
 }
 
@@ -1017,12 +1038,12 @@
 }
 
 .event__title {
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .event__sub {
   color: var(--text-soft);
-  font-size: 13px;
+  font-size: 12.5px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1030,8 +1051,8 @@
 
 .event__amount {
   flex: 0 0 auto;
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 15.5px;
+  font-weight: 650;
   text-align: right;
 }
 
@@ -1069,14 +1090,15 @@
 
 .faint {
   color: var(--text-faint);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .big-number {
   font-family: var(--font-display);
   font-size: var(--size-headline);
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .hidden {
