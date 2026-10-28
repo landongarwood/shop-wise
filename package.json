@@ -16,7 +16,9 @@
     "build": "node build/build.js",
     "msi": "node build/build.js --msi",
     "tools:wix": "node build/fetch-wix.js",
-    "test": "node --test test/**/*.test.js"
+    "test": "node --test \"test/**/*.test.js\"",
+    "test:e2e": "node test/e2e/flows.js",
+    "test:all": "npm test && npm run test:e2e"
   },
   "dependencies": {},
   "devDependencies": {}

@@ -1,0 +1,96 @@
+/*
+ * Design tokens.
+ *
+ * Every colour, space and radius used anywhere in the app is named here, and
+ * dark mode is nothing more than a second set of values for the same names. No
+ * component ever hard-codes a colour, so the two themes cannot drift apart.
+ */
+
+:root {
+  /* Surfaces, from furthest back to nearest front. */
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-sunken: #eceef2;
+  --surface-hover: #f0f2f6;
+  --border: #dde1e7;
+  --border-strong: #c2c8d2;
+
+  /* Text. */
+  --text: #16181d;
+  --text-soft: #5a6472;
+  --text-faint: #8b95a3;
+
+  /* The one accent, used for the action the user most likely wants. */
+  --accent: #1f4fd8;
+  --accent-hover: #1a43ba;
+  --accent-text: #ffffff;
+  --accent-soft: #e8edfd;
+
+  /* Money has a direction: owed to the shop, or paid to the shop. */
+  --debt: #b42318;
+  --debt-soft: #fdeceb;
+  --paid: #027a48;
+  --paid-soft: #e6f4ed;
+  --warn: #b54708;
+  --warn-soft: #fdf0e6;
+
+  --shadow-low: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 4%);
+  --shadow-mid: 0 4px 10px rgb(16 24 40 / 8%), 0 2px 4px rgb(16 24 40 / 4%);
+  --shadow-high: 0 18px 40px rgb(16 24 40 / 16%), 0 4px 10px rgb(16 24 40 / 8%);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 22px;
+  --space-6: 30px;
+  --space-7: 42px;
+
+  /* Nothing a finger or an unsteady hand has to hit is smaller than this. */
+  --tap-min: 52px;
+  --tap-big: 68px;
+
+  --font-text: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI Semibold', 'Segoe UI', system-ui, sans-serif;
+  --font-numeric: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+
+  --appbar-height: 64px;
+  --content-max: 1080px;
+
+  --transition: 140ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+:root[data-theme='dark'] {
+  --bg: #0f1116;
+  --surface: #181b22;
+  --surface-sunken: #121419;
+  --surface-hover: #21252e;
+  --border: #2a2f3a;
+  --border-strong: #3c424f;
+
+  --text: #e9ebef;
+  --text-soft: #a0a9b8;
+  --text-faint: #717b8b;
+
+  --accent: #5b7cfa;
+  --accent-hover: #6f8cfb;
+  --accent-text: #0b0e16;
+  --accent-soft: #1b2340;
+
+  --debt: #f97066;
+  --debt-soft: #2a1715;
+  --paid: #47cd89;
+  --paid-soft: #10251b;
+  --warn: #fdb022;
+  --warn-soft: #2a1f10;
+
+  --shadow-low: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-mid: 0 4px 12px rgb(0 0 0 / 45%);
+  --shadow-high: 0 20px 44px rgb(0 0 0 / 60%);
+}

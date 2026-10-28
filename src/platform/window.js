@@ -4,8 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawn, execFile } = require('node:child_process');
 
-const config = require('./config');
-const log = require('./log');
+const config = require('../config');
+const log = require('../log');
 
 const PROGRAM_FILES = [
   process.env['ProgramFiles(x86)'],

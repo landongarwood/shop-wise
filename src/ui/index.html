@@ -1,37 +1,25 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="shopwise-token" content="{{SESSION_TOKEN}}" />
+    <meta name="shopwise-version" content="{{VERSION}}" />
     <title>{{PRODUCT_NAME}}</title>
-    <link rel="stylesheet" href="/app.css" />
+
+    <link rel="stylesheet" href="/styles/tokens.css" />
+    <link rel="stylesheet" href="/styles/base.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
   </head>
   <body>
-    <div class="shell">
-      <nav class="sidebar">
-        <div class="brand">
-          <span class="brand-mark">SW</span>
-          <span class="brand-name">{{PRODUCT_NAME}}</span>
-        </div>
-
-        <ul class="nav" id="nav"></ul>
-
-        <div class="sidebar-foot">
-          <button class="ghost" id="theme-toggle" type="button">Dark mode</button>
-          <span class="version">v{{VERSION}}</span>
-        </div>
-      </nav>
-
-      <main class="content">
-        <header class="topbar">
-          <h1 id="view-title">Dashboard</h1>
-          <div class="topbar-meta" id="topbar-meta"></div>
-        </header>
-        <section class="view" id="view"></section>
-      </main>
+    <div class="app">
+      <header class="appbar" id="appbar"></header>
+      <main class="screen" id="screen" tabindex="-1"></main>
     </div>
 
-    <script src="/app.js" type="module"></script>
+    <div id="sheet-root"></div>
+    <div id="toast-root" class="toast-root" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/app.js"></script>
   </body>
 </html>

@@ -1,30 +1,86 @@
 # ShopWise
 
-Lightweight Windows accounting app for a small shop or cafe.
+A Windows app for a small shop or cafe that sells on account: record what went
+out, record what customers pay, and always know who owes what.
 
-- **No npm packages.** `dependencies` and `devDependencies` are both empty, and they are meant to stay that way.
-- **Nothing to install on the shop's PC.** The installer carries its own Node runtime, and the window is drawn by the Edge WebView engine that is already part of Windows.
-- **Ships as an MSI** with proper upgrade codes, so installing v0.2 replaces v0.1 instead of sitting beside it.
+Built to stay small. **Zero npm packages** — `dependencies` and
+`devDependencies` are both empty and are meant to stay that way. Nothing to
+install on the shop's PC: the installer carries its own Node runtime, and the
+window is drawn by the Edge WebView engine already part of Windows. Ships as an
+**MSI** with proper upgrade codes, so installing v0.2 replaces v0.1.
 
-## Status
+No login, no accounts, no cloud. One person, one PC.
 
-Scaffold. The shell, local server, API router, installer pipeline and tests work end to end. The feature screens and the storage backend are not written yet — see [Open decisions](#open-decisions).
+## What it does
+
+Three things the shopkeeper does, each one tap from the home screen:
+
+| | |
+| --- | --- |
+| **Sell** | Pick a customer, tap products. Each tap asks how many and at what price — pre-filled with the usual price, editable because it varies. |
+| **Add stock** | Tap a product, say how much came in. Saves immediately, so a long delivery can't be half-lost. |
+| **Take payment** | Pick a customer, enter what they paid. "Pay all" is one tap. Any date, any amount. |
+
+And four things they look up:
+
+| | |
+| --- | --- |
+| **Customers** | Everyone with their balance, biggest debt first. |
+| **One customer** | Balance as a headline, then sales and payments on one timeline with the balance as it stood after each — so a disputed total can be read down until you disagree. |
+| **Stock** | What's on the shelves; anything short floats to the top. |
+| **Sales report** | What sold over any period — today, this month, last month, or a custom range — ranked by the money it brought in, plus who bought and a day-by-day breakdown. |
+
+## Two rules the whole app rests on
+
+**Nothing is a stored counter.** Stock is `added − sold`. A customer's balance is
+`charged − paid`. Both are computed from the movements every time they're read,
+so no figure can drift away from the records that explain it, and deleting a
+mis-keyed sale simply undoes its effect everywhere.
+
+**Money is only ever integer cents.** Amounts are parsed from their decimal
+string form and never summed as floats — a shop's books can't afford
+`0.1 + 0.2`. Quantities allow three decimals so goods sold by weight work.
+
+Two consequences worth knowing: a payment is never matched to a particular sale,
+because the shop doesn't work that way; and paying more than the balance is
+normal, not an error — it becomes credit.
 
 ## Running it
 
 ```sh
 npm start          # open the app window
 npm run dev        # same, with logs echoed to the terminal
-npm run serve      # server only, no window (open the printed URL yourself)
-npm test           # smoke tests
+npm run serve      # server only, no window — open the printed URL yourself
 ```
 
-No build step is involved — it is plain JavaScript on both sides of the wire.
+No build step: plain JavaScript on both sides of the wire. Edit a file, reload
+the window.
+
+## Tests
+
+```sh
+npm test           # 62 unit + HTTP + module-graph tests, instant
+npm run test:e2e   # drives the real UI in headless Edge, ~20s
+npm run test:all   # both
+```
+
+`npm test` needs nothing but Node. The domain is tested over an in-memory store
+with a fixed clock, which the composition root accepts as parameters — see
+[test/support/fixture.js](test/support/fixture.js).
+
+[test/e2e/flows.js](test/e2e/flows.js) clicks through a real sale, a partial
+payment, the customer history and the report in headless Edge over the DevTools
+protocol, then checks the books server-side. No driver library — Node's built-in
+WebSocket is enough.
+
+[test/ui/module-graph.test.js](test/ui/module-graph.test.js) exists because the
+UI has no bundler: it walks every import from `index.html` and insists each file
+exists and is served, since otherwise a typo'd path shows up as a blank window.
 
 ## Building the installer
 
-The MSI needs the WiX toolset, which is a folder of executables that run on the
-.NET Framework already present in Windows. No .NET SDK, no Visual Studio.
+The MSI needs the WiX toolset — a folder of executables that run on the .NET
+Framework already in Windows. No .NET SDK, no Visual Studio.
 
 ```sh
 npm run tools:wix  # one-time: downloads WiX v3 into ./tools (gitignored)
@@ -32,68 +88,77 @@ npm run msi        # -> dist/ShopWise-<version>-x64.msi
 npm run build      # stage ./stage only, skip the MSI
 ```
 
-To release a new version, bump `version` in `package.json` and run `npm run msi`.
-The `UpgradeCode` in [ShopWise.wxs](build/wix/ShopWise.wxs) must never change;
-the `ProductCode` is regenerated on every build, which is what lets Windows
-perform a major upgrade in place.
+To release, bump `version` in `package.json` and run `npm run msi`. The
+`UpgradeCode` in [ShopWise.wxs](build/wix/ShopWise.wxs) must never change; the
+`ProductCode` is regenerated every build, which is what lets Windows do an
+in-place major upgrade.
 
-Current output: **~24 MB MSI, ~85 MB installed**, nearly all of which is the Node runtime.
+Current output: **~24 MB MSI, ~85 MB installed**, almost all of it the Node runtime.
 
 ## How it fits together
 
 ```
 ShopWise.exe  (a copy of node.exe, PE subsystem flipped to GUI so no console flashes)
    └─ src/main.js
-        ├─ src/server.js   local HTTP server on 127.0.0.1, random free port
-        │    ├─ src/ui/    static files: plain HTML, CSS, ES modules
-        │    └─ src/api/   JSON endpoints under /api
-        │         └─ src/store/   persistence boundary
-        └─ src/window.js   launches msedge.exe --app=<url> in its own profile
+        ├─ src/container.js    composition root — the only file that wires things
+        ├─ src/http/           server, router, static files, session token
+        ├─ src/domain/         the rules: catalog, customers, inventory, sales,
+        │                      ledger, reports, overview, settings
+        ├─ src/persistence/    JSON document store, repositories, daily backups
+        ├─ src/shared/         money, quantity, clock, ids, validation, day ranges
+        ├─ src/platform/       locates Edge and opens the window
+        └─ src/ui/             core/ widgets/ screens/ styles/ — no framework
 ```
 
-The window owns the app's lifetime: closing it shuts the server down.
+Services receive their repositories, clock and id source through their
+constructors and never reach for globals, so [src/container.js](src/container.js)
+is the only file that knows which concrete thing fills each dependency. Swapping
+the JSON store for `node:sqlite` is a change to that one file.
+
+Navigation is a **stack of tasks, not a tree of pages** — no sidebar. Home is the
+root; starting a task pushes a screen, finishing or abandoning it pops back, so
+there is always exactly one way out, in one place.
 
 A few details worth knowing before changing things:
 
-- **The API is token-guarded.** A loopback server is reachable by any page the
-  user has open in a browser, so every `/api` call must carry the per-run token
-  that `server.js` templates into `index.html`. See [src/server.js](src/server.js).
+- **The API is token-guarded, and that is not a login.** The app serves itself
+  over `http://127.0.0.1:<port>`, which any website the user has open could
+  otherwise post to. The page receives a per-run token automatically; nobody
+  types anything. See [src/http/session-token.js](src/http/session-token.js).
 - **The runtime is patched, not compiled.** `build.js` copies `node.exe` and
   flips two bytes in its PE header from the console subsystem to the GUI
-  subsystem. The app therefore has no usable stdout, which is why it logs to a
-  file. See `makeWindowless` in [build/build.js](build/build.js).
+  subsystem, so no black window flashes on launch. The app therefore has no
+  usable stdout, which is why it logs to a file.
 - **Edge gets its own profile** under the data directory. Without that, Edge
-  would hand the window to an already-running Edge process and exit
-  immediately, taking our server's lifetime signal with it.
-- **Data outlives uninstall.** The installer deliberately does not remove the
-  data directory. A shop's books must survive a bad upgrade.
+  hands the window to an already-running Edge and exits, taking the app's
+  lifetime signal with it.
+- **Names are snapshotted onto records.** A sale line keeps the product name and
+  unit as they were. Renaming a product next month must not change what last
+  month's sale says.
+- **Products and customers are hidden, never deleted**, because past sales refer
+  to them.
+- **No module writes user data through innerHTML.** `el({ text })` always uses
+  `textContent`; the single exception is `icons.js`, whose SVG is a literal in
+  its own source. A test enforces this.
 
 ## Where data lives
 
 | | Path |
 | --- | --- |
-| Installed | `%LOCALAPPDATA%\ShopWise` |
-| From source | `./.data` (gitignored) |
+| Installed | `%LOCALAPPDATA%\ShopWise\shop.json` |
+| From source | `./.data/shop.json` (gitignored) |
+| Backups | `<data>\backups\shop-YYYY-MM-DD.json` — one per day, 30 kept |
 | Log | `<data>\shopwise.log` |
 
-Running from the repo never touches the installed copy's data. Override with
-`--data-dir=<path>` if you need to.
+Writes are atomic (temp file, fsync, rename) and transactional: a mutation runs
+against a clone and is committed only if it completes, so a rejected sale cannot
+leave half of itself behind. An unreadable file is moved aside rather than
+silently replaced with empty books.
 
-## Open decisions
-
-Two things are deliberately unresolved, both flagged in the code:
-
-1. **Feature scope** — what the app tracks. The candidates were a plain cash
-   book; cash book plus products and sales; the same plus stock levels; or full
-   double-entry books. Views are registered in one list in
-   [src/ui/app.js](src/ui/app.js).
-2. **Storage backend** — [src/store/index.js](src/store/index.js) defines the
-   interface and currently resolves to a non-persistent in-memory adapter so
-   the app boots. The real options are a JSON file with atomic writes and
-   backups, or `node:sqlite` (built into Node 22+, so still zero packages —
-   and the bundled runtime here is already Node 22).
+Uninstalling deliberately leaves the data directory alone. Running from the repo
+never touches the installed copy's data. Override with `--data-dir=<path>`.
 
 ## Requirements
 
 - **Shop PC:** 64-bit Windows 8.1 or later, with Edge present (it is, on Windows 10 and 11).
-- **Build PC:** Node 20+ and the WiX toolset fetched by `npm run tools:wix`.
+- **Build PC:** Node 20+, plus the WiX toolset from `npm run tools:wix` if you want the MSI.
