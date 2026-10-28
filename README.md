@@ -196,9 +196,14 @@ A few details worth knowing before changing things:
   flips two bytes in its PE header from the console subsystem to the GUI
   subsystem, so no black window flashes on launch. The app therefore has no
   usable stdout, which is why it logs to a file.
-- **Edge gets its own profile** under the data directory. Without that, Edge
-  hands the window to an already-running Edge and exits, taking the app's
-  lifetime signal with it.
+- **Edge gets its own profile** under the data directory, so the shop's window
+  stays out of the user's browsing session.
+- **The page says whether the window is open**, by holding one event stream for
+  as long as it is on screen; the app stops five seconds after that stream goes
+  for good. The process Edge is launched with is not the window and cannot be
+  asked: Edge moves the window to a browser process of its own and lets the
+  launched one exit whenever it likes. See
+  [src/platform/lifetime.js](src/platform/lifetime.js).
 - **Names are snapshotted onto records.** A sale line keeps the product name and
   unit as they were. Renaming a product next month must not change what last
   month's sale says.
@@ -228,4 +233,11 @@ never touches the installed copy's data. Override with `--data-dir=<path>`.
 ## Requirements
 
 - **Shop PC:** 64-bit Windows 8.1 or later, with Edge present (it is, on Windows 10 and 11).
-- **Build PC:** Node 20+, plus the WiX toolset from `npm run tools:wix` if you want the MSI.
+- **Build PC:** Node 20+ and nothing else installed. There are no npm packages
+  to fetch, and WiX v3 — downloaded by `npm run tools:wix`, which needs the
+  internet once — runs on the .NET Framework that is already part of Windows.
+  Edge is what `npm run test:e2e` and `npm run icon` drive, and the end-to-end
+  harness uses Node's built-in WebSocket, so run those on Node 22.
+
+  A clean clone on a stock Windows 11 machine with only Node 22: `npm install`
+  (nothing to install), `npm test`, `npm run tools:wix`, `npm run msi`.
