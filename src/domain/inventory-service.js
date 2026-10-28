@@ -2,6 +2,7 @@
 
 const quantity = require('../shared/quantity');
 const validate = require('../shared/validate');
+const { resolveInstant } = require('../shared/clock');
 const { badRequest } = require('../errors');
 
 /**
@@ -35,7 +36,7 @@ class InventoryService {
     const productId = validate.id(input?.productId, 'product');
     const product = this.catalog.get(productId);
     const amount = quantity.parse(input?.quantity, 'quantity');
-    const at = validate.instant(input?.at) ?? this.clock.now().toISOString();
+    const at = resolveInstant(input?.at, this.clock);
     const note = validate.text(input?.note, 'note', { required: false, max: 200 });
 
     if (product.archived) throw badRequest(`"${product.name}" is hidden. Restore it before adding stock.`);
@@ -63,7 +64,7 @@ class InventoryService {
    */
   async addStockBatch(input) {
     const lines = validate.array(input?.lines, 'product', { min: 1 });
-    const at = validate.instant(input?.at) ?? this.clock.now().toISOString();
+    const at = resolveInstant(input?.at, this.clock);
     const note = validate.text(input?.note, 'note', { required: false, max: 200 });
     const createdAt = this.clock.now().toISOString();
 

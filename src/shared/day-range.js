@@ -37,6 +37,25 @@ const endOf = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDa
  * @param {{now:Function}} clock
  * @returns {{fromDay:string|null, toDay:string|null, fromIso:string|null, toIso:string|null, label:string}}
  */
+/**
+ * The instants a pair of days covers: midnight to the last millisecond of the
+ * last day, with either day standing in for a missing other.
+ *
+ * Filtering by a day has to mean the whole day. Reading it as a single instant
+ * is how "from today" ends up missing the morning.
+ *
+ * @returns {{fromIso: string|null, toIso: string|null}} nulls when no day was given
+ */
+function boundsFor(from, to) {
+  if (!from && !to) return { fromIso: null, toIso: null };
+
+  const start = startOf(parseDay(from ?? to, 'From'));
+  const end = endOf(parseDay(to ?? from, 'To'));
+
+  if (end < start) throw badRequest('That range ends before it starts.');
+  return { fromIso: start.toISOString(), toIso: end.toISOString() };
+}
+
 function resolve({ preset = null, from = null, to = null } = {}, clock) {
   const now = clock.now();
 
@@ -100,4 +119,4 @@ const addDays = (date, days) =>
 const contains = (range, iso) =>
   (!range.fromIso || iso >= range.fromIso) && (!range.toIso || iso <= range.toIso);
 
-module.exports = { resolve, contains };
+module.exports = { resolve, contains, boundsFor };

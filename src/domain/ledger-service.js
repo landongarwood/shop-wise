@@ -2,6 +2,7 @@
 
 const money = require('../shared/money');
 const validate = require('../shared/validate');
+const { resolveInstant } = require('../shared/clock');
 
 /**
  * What each customer owes, and what they have paid.
@@ -34,7 +35,7 @@ class LedgerService {
     const customerId = validate.id(input?.customerId, 'customer');
     const customer = this.customers.get(customerId);
     const amount = money.parseMinor(input?.amount, 'amount');
-    const at = validate.instant(input?.at) ?? this.clock.now().toISOString();
+    const at = resolveInstant(input?.at, this.clock);
     const note = validate.text(input?.note, 'note', { required: false, max: 200 });
 
     return this.payments.add({

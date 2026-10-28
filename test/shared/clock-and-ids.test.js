@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const { test, describe } = require('node:test');
 
-const { SystemClock, FixedClock, toLocalDay } = require('../../src/shared/clock');
+const { SystemClock, FixedClock, toLocalDay, resolveInstant } = require('../../src/shared/clock');
 const { UuidIds, SequentialIds } = require('../../src/shared/ids');
 const { AppError, badRequest, notFound, conflict } = require('../../src/errors');
 
@@ -46,6 +46,53 @@ describe('the clock', () => {
     const borrowed = clock.now();
     borrowed.setFullYear(1999);
     assert.equal(clock.now().getFullYear(), 2026);
+  });
+});
+
+/**
+ * A date field answers with a day and no time, so something has to decide what
+ * time that day means. Getting this wrong is what made every payment taken
+ * through the app read "12:00 PM".
+ */
+describe('working out when something happened', () => {
+  const clock = new FixedClock('2026-03-15T14:30:00.000Z');
+  const today = clock.today();
+  const yesterdayNoon = () => {
+    const date = new Date(clock.now());
+    date.setDate(date.getDate() - 1);
+    return toLocalDay(date);
+  };
+
+  test('nothing given means now', () => {
+    assert.equal(resolveInstant(undefined, clock), clock.now().toISOString());
+    assert.equal(resolveInstant('', clock), clock.now().toISOString());
+    assert.equal(resolveInstant(null, clock), clock.now().toISOString());
+  });
+
+  test("today, with no time, means now — not the middle of the day", () => {
+    const at = resolveInstant(today, clock);
+
+    assert.equal(at, clock.now().toISOString());
+    assert.equal(toLocalDay(new Date(at)), today);
+  });
+
+  test('another day has no time to know, so it sits at noon', () => {
+    const at = resolveInstant(yesterdayNoon(), clock);
+    const local = new Date(at);
+
+    assert.equal(toLocalDay(local), yesterdayNoon(), 'and stays on the day that was asked for');
+    assert.equal(local.getHours(), 12);
+    assert.equal(local.getMinutes(), 0);
+  });
+
+  test('a full instant is taken at its word, today or not', () => {
+    const exact = '2026-03-15T09:15:00.000Z';
+
+    assert.equal(resolveInstant(exact, clock), exact);
+  });
+
+  test('a day that does not exist is still refused', () => {
+    assert.throws(() => resolveInstant('2026-02-31', clock), /not a real date/);
   });
 });
 

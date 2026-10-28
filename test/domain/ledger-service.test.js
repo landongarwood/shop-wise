@@ -156,6 +156,68 @@ describe('customer statement', () => {
   });
 });
 
+/**
+ * Every screen sends the day from a date field, which carries no time. Today
+ * has to mean now, or the whole day's work reads "12:00 PM" and the order it
+ * happened in is lost.
+ */
+describe('the time a record is kept at', () => {
+  test('a payment taken today is stamped with the time of day', async () => {
+    const { services, clock, alice } = await createShop();
+
+    const payment = await services.ledger.recordPayment({
+      customerId: alice.id,
+      amount: '20.00',
+      at: clock.today(),
+    });
+
+    assert.equal(payment.at, clock.now().toISOString());
+    assert.notEqual(new Date(payment.at).getHours(), 12);
+  });
+
+  test('so is a sale', async () => {
+    const { services, clock, coffee, alice } = await createShop();
+
+    const { sale } = await services.sales.record({
+      customerId: alice.id,
+      items: [{ productId: coffee.id, quantity: 1 }],
+      at: clock.today(),
+    });
+
+    assert.equal(sale.at, clock.now().toISOString());
+  });
+
+  test('and a delivery, one at a time or in bulk', async () => {
+    const { services, clock, coffee, cups } = await createShop();
+
+    const entry = await services.inventory.addStock({
+      productId: coffee.id,
+      quantity: 5,
+      at: clock.today(),
+    });
+    const [line] = await services.inventory.addStockBatch({
+      lines: [{ productId: cups.id, quantity: 10 }],
+      at: clock.today(),
+    });
+
+    assert.equal(entry.at, clock.now().toISOString());
+    assert.equal(line.at, clock.now().toISOString());
+  });
+
+  test('a day in the past keeps its noon, since no time was given', async () => {
+    const { services, clock, alice } = await createShop();
+
+    const payment = await services.ledger.recordPayment({
+      customerId: alice.id,
+      amount: '20.00',
+      at: '2026-03-01',
+    });
+
+    assert.equal(new Date(payment.at).getHours(), 12);
+    assert.notEqual(payment.at, clock.now().toISOString());
+  });
+});
+
 describe('shop-wide totals', () => {
   test('separates money owed to the shop from money paid ahead', async () => {
     const { services, coffee, alice, bob } = await createShop();

@@ -3,6 +3,7 @@
 const money = require('../shared/money');
 const quantity = require('../shared/quantity');
 const validate = require('../shared/validate');
+const { resolveInstant } = require('../shared/clock');
 
 /**
  * Recording what went out of the shop and to whom.
@@ -33,7 +34,7 @@ class SalesService {
     const customerId = validate.id(input?.customerId, 'customer');
     const customer = this.customers.get(customerId);
     const lines = validate.array(input?.items, 'product', { min: 1 });
-    const at = validate.instant(input?.at) ?? this.clock.now().toISOString();
+    const at = resolveInstant(input?.at, this.clock);
     const note = validate.text(input?.note, 'note', { required: false, max: 200 });
 
     const items = lines.map((line) => this.#buildItem(line));

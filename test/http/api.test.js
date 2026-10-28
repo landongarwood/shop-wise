@@ -255,6 +255,15 @@ describe('the HTTP API', () => {
 
       assert.ok((await call('GET', '/sales')).payload.some((row) => row.id === sale.id));
       assert.equal((await call('GET', `/sales?customerId=${customer.id}`)).payload.length, 1);
+
+      // A day in the filter means the whole day, or a sale made this morning
+      // drops out of "sales from today". The fixture's clock decides today.
+      const day = container.clock.today();
+      const all = (await call('GET', '/sales')).payload.length;
+      assert.equal((await call('GET', `/sales?from=${day}&to=${day}`)).payload.length, all);
+      assert.equal((await call('GET', `/sales?from=${day}`)).payload.length, all);
+      assert.equal((await call('GET', '/sales?from=2026-01-01&to=2026-01-02')).payload.length, 0);
+      assert.equal((await call('GET', '/sales?from=not-a-day')).status, 400);
       assert.equal((await call('GET', `/sales/${sale.id}`)).payload.total, 200);
       assert.equal((await call('GET', '/sales/nope')).status, 404);
 
