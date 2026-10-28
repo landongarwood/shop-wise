@@ -56,12 +56,25 @@ class InventoryService {
     return this.stockEntries.remove(id);
   }
 
-  entriesFor(productId, { limit = 50 } = {}) {
-    return this.stockEntries
+  /**
+   * One page of a product's stock-in history, newest first.
+   *
+   * The count comes back with it: a list that silently stops at its limit is
+   * worse than a short one, because nothing says there is more behind it.
+   *
+   * @returns {{entries: object[], total: number, hasMore: boolean}}
+   */
+  entriesFor(productId, { limit = 20, offset = 0 } = {}) {
+    const all = this.stockEntries
       .all()
       .filter((entry) => entry.productId === productId)
-      .sort(byNewest)
-      .slice(0, limit);
+      .sort(byNewest);
+
+    return {
+      entries: all.slice(offset, offset + limit),
+      total: all.length,
+      hasMore: offset + limit < all.length,
+    };
   }
 
   /** @returns {Map<string, {added:number, sold:number, onHand:number}>} */

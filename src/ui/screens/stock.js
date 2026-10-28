@@ -1,4 +1,4 @@
-import { div, button, input, span } from '../core/dom.js';
+import { div, button, input, span, append } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { openSheet, confirmSheet } from '../core/sheet.js';
 import { toastOk } from '../core/toast.js';
@@ -233,17 +233,98 @@ export async function stock(ctx) {
   };
 }
 
+const HISTORY_PAGE = 20;
+
 /** The handful of things you can do to one product. */
 async function openProductSheet(product, ctx) {
   const { api, format, reload } = ctx;
-  const entries = await api.get(`/stock/products/${product.id}/entries`);
+
+  const page = (offset) => api.get(`/stock/products/${product.id}/entries?limit=${HISTORY_PAGE}&offset=${offset}`);
+
+  const first = await page(0);
+  let shown = first.entries.length;
+  let hasMore = first.hasMore;
+
+  /*
+   * A product restocked weekly for two years has a hundred entries behind it,
+   * so the history is paged and scrolls in its own area. The count says how
+   * much is behind the scroll, because a list that just stops is indis-
+   * tinguishable from one that has ended.
+   */
+  const list = div({ class: 'history' });
+  const countLine = div({ class: 'picker__count' });
+  const olderButton = button({ class: 'button button--block' }, 'Show older');
+
+  let closeSheet = () => {};
+
+  const describe = () => {
+    countLine.textContent =
+      first.total === 0
+        ? ''
+        : hasMore
+          ? `showing ${shown} of ${first.total}`
+          : `${first.total} ${first.total === 1 ? 'entry' : 'entries'}`;
+    olderButton.hidden = !hasMore;
+  };
+
+  const entryRow = (entry) =>
+    div({ class: 'row row--static' }, [
+      div({ class: 'row__main' }, [
+        div({
+          class: 'row__title tnum',
+          text: `+ ${format.quantity(entry.quantity)} ${product.unit ?? ''}`.trim(),
+        }),
+        div({
+          class: 'row__sub',
+          text: `${format.relativeDay(entry.at)}${entry.note ? ` · ${entry.note}` : ''}`,
+        }),
+      ]),
+      button(
+        {
+          class: 'icon-button',
+          ariaLabel: 'Remove this entry',
+          onclick: async () => {
+            const confirmed = await confirmSheet({
+              title: 'Remove this stock entry?',
+              message: `${format.quantity(entry.quantity)} will be taken back off ${product.name}.`,
+              confirmLabel: 'Remove',
+            });
+            if (confirmed) {
+              await api.delete(`/stock/entries/${entry.id}`);
+              closeSheet(null);
+              toastOk('Entry removed');
+              await reload();
+            }
+          },
+        },
+        icon('trash', { size: 18 })
+      ),
+    ]);
+
+  olderButton.addEventListener('click', async () => {
+    olderButton.disabled = true;
+    try {
+      const next = await page(shown);
+      append(list, next.entries.map(entryRow));
+      shown += next.entries.length;
+      hasMore = next.hasMore;
+      describe();
+    } finally {
+      olderButton.disabled = false;
+    }
+  });
+
+  append(list, first.entries.map(entryRow));
+  describe();
 
   await openSheet({
     title: product.name,
     hideConfirm: true,
     cancelLabel: 'Close',
-    body: (close) =>
-      div({}, [
+    body: (close) => {
+      closeSheet = close;
+
+      return div({ class: 'sheet-fill' }, [
         div({ class: 'summary', style: { gridTemplateColumns: '1fr 1fr' } }, [
           stat({ label: 'In stock', value: `${format.quantity(product.onHand)} ${product.unit ?? ''}`.trim() }),
           stat({ label: 'Usual price', value: format.money(product.price) }),
@@ -299,47 +380,15 @@ async function openProductSheet(product, ctx) {
           ),
         ]),
 
-        div({ class: 'section__title', text: 'Stock taken in' }),
-        entries.length
-          ? div(
-              { class: 'rows' },
-              entries.slice(0, 12).map((entry) =>
-                div({ class: 'row row--static' }, [
-                  div({ class: 'row__main' }, [
-                    div({
-                      class: 'row__title tnum',
-                      text: `+ ${format.quantity(entry.quantity)} ${product.unit ?? ''}`.trim(),
-                    }),
-                    div({
-                      class: 'row__sub',
-                      text: `${format.relativeDay(entry.at)}${entry.note ? ` · ${entry.note}` : ''}`,
-                    }),
-                  ]),
-                  button(
-                    {
-                      class: 'icon-button',
-                      ariaLabel: 'Remove this entry',
-                      onclick: async () => {
-                        const confirmed = await confirmSheet({
-                          title: 'Remove this stock entry?',
-                          message: `${format.quantity(entry.quantity)} will be taken back off ${product.name}.`,
-                          confirmLabel: 'Remove',
-                        });
-                        if (confirmed) {
-                          await api.delete(`/stock/entries/${entry.id}`);
-                          close(null);
-                          toastOk('Entry removed');
-                          await reload();
-                        }
-                      },
-                    },
-                    icon('trash', { size: 18 })
-                  ),
-                ])
-              )
-            )
+        div({ class: 'section__head' }, [
+          div({ class: 'section__title', text: 'Stock taken in' }),
+          countLine,
+        ]),
+        first.total
+          ? div({ class: 'history-pane' }, [list, olderButton])
           : div({ class: 'card soft', text: 'No stock has been taken in yet.' }),
-      ]),
+      ]);
+    },
   });
 }
 

@@ -403,6 +403,46 @@
   font-weight: 600;
 }
 
+/*
+ * A product's stock-in history is the one thing in its sheet that scrolls.
+ *
+ * It fills whatever height is left rather than taking a fixed slice, so a
+ * short history simply ends and a long one scrolls in place — and either way
+ * the figures and the actions above it stay where they were put. Two scrolling
+ * regions inside one sheet means scrolling the sheet to reach the list and then
+ * scrolling the list, which is the thing worth avoiding.
+ */
+.sheet__body:has(> .sheet-fill) {
+  display: flex;
+  overflow: hidden;
+}
+
+.sheet-fill {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.history-pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+  padding-bottom: var(--space-2);
+}
+
+.history {
+  flex: 1 1 auto;
+  min-height: 120px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
 /* ---------- list rows ---------- */
 
 .rows {

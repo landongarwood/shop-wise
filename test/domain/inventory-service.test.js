@@ -73,6 +73,54 @@ describe('stock', () => {
     );
   });
 
+  test('hands back one page of history at a time, and says how much there is', async () => {
+    const { services, coffee } = await createShop();
+
+    // 55 deliveries: more than one page, and not a round number of them.
+    for (let i = 0; i < 54; i += 1) {
+      await services.inventory.addStock({ productId: coffee.id, quantity: 1 });
+    }
+
+    const first = services.inventory.entriesFor(coffee.id);
+    assert.equal(first.entries.length, 20);
+    assert.equal(first.total, 55, 'the opening stock counts too');
+    assert.equal(first.hasMore, true);
+
+    const second = services.inventory.entriesFor(coffee.id, { offset: 20 });
+    assert.equal(second.entries.length, 20);
+    assert.equal(second.hasMore, true);
+
+    const last = services.inventory.entriesFor(coffee.id, { offset: 40 });
+    assert.equal(last.entries.length, 15);
+    assert.equal(last.hasMore, false, 'the final page says so');
+
+    // No entry appears on two pages.
+    const ids = [...first.entries, ...second.entries, ...last.entries].map((entry) => entry.id);
+    assert.equal(new Set(ids).size, 55);
+  });
+
+  test('history comes back newest first', async () => {
+    const { services, coffee } = await createShop();
+
+    await services.inventory.addStock({ productId: coffee.id, quantity: 1, at: '2026-03-01' });
+    await services.inventory.addStock({ productId: coffee.id, quantity: 2, at: '2026-03-09' });
+    await services.inventory.addStock({ productId: coffee.id, quantity: 3, at: '2026-03-05' });
+
+    const days = services.inventory.entriesFor(coffee.id).entries.map((entry) => entry.at);
+    assert.deepEqual(days, [...days].sort().reverse());
+  });
+
+  test('a product with no history reports an empty page rather than failing', async () => {
+    const container = createFixture();
+    const product = await container.services.catalog.create({ name: 'Napkins', price: '1.00' });
+
+    assert.deepEqual(container.services.inventory.entriesFor(product.id), {
+      entries: [],
+      total: 0,
+      hasMore: false,
+    });
+  });
+
   test('removing a mis-keyed delivery corrects the stock', async () => {
     const { services, coffee } = await createShop();
 
