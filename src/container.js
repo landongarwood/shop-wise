@@ -27,6 +27,7 @@ const { registerRoutes } = require('./http/routes');
 const { StaticFileHandler } = require('./http/static-files');
 const { SessionToken } = require('./http/session-token');
 const { HttpServer } = require('./http/server');
+const { DevReloadChannel } = require('./http/dev-reload');
 
 /**
  * The composition root: the one place that knows which concrete thing fills
@@ -130,6 +131,10 @@ function createContainer({
 
   const sessionToken = new SessionToken();
 
+  // Live reload exists only when started with --dev, so the installed app
+  // never opens the endpoint at all.
+  const devChannel = config.dev ? new DevReloadChannel({ logger }) : null;
+
   const server = new HttpServer({
     router: registerRoutes(new Router(), services),
     staticFiles: new StaticFileHandler({
@@ -138,15 +143,17 @@ function createContainer({
         SESSION_TOKEN: sessionToken.value,
         PRODUCT_NAME: config.productName,
         VERSION: config.version,
+        DEV: String(config.dev),
       }),
     }),
     sessionToken,
+    devChannel,
     logger,
     host: config.host,
     port: config.port,
   });
 
-  return { config, logger, clock, ids, store: documentStore, repositories, services, sessionToken, server };
+  return { config, logger, clock, ids, store: documentStore, repositories, services, sessionToken, devChannel, server };
 }
 
 const repository = (store, collection, label) => new CollectionRepository({ store, collection, label });

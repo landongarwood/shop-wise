@@ -133,6 +133,15 @@ describe('the HTTP API', () => {
     assert.equal(response.status, 400);
   });
 
+  test('the live-reload endpoint does not exist outside dev mode', async () => {
+    // It sits outside /api because EventSource cannot send the session token,
+    // so it must simply not be there unless the app was started with --dev.
+    const response = await fetch(`${base}/dev/events`);
+
+    assert.equal(response.status, 404);
+    assert.equal(container.devChannel, null);
+  });
+
   test('rejects writes to the static side', async () => {
     const response = await fetch(`${base}/styles/tokens.css`, { method: 'POST' });
     assert.equal(response.status, 405);

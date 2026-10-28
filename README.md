@@ -55,13 +55,25 @@ normal, not an error — it becomes credit.
 ## Running it
 
 ```sh
-npm start          # open the app window
-npm run dev        # same, with logs echoed to the terminal
+npm run dev        # app window + live reload   <- use this while working
+npm start          # app window, no watching
 npm run serve      # server only, no window — open the printed URL yourself
+npm run dev:serve  # watched server only, fixed port, no window
 ```
 
-No build step: plain JavaScript on both sides of the wire. Edit a file, reload
-the window.
+No build step: plain JavaScript on both sides of the wire.
+
+`npm run dev` opens the window once and runs the server under Node's own
+`--watch`, so **any** change under `src/` — a CSS token, a screen, a domain
+service — restarts it and the window reloads itself. Nothing to press.
+
+The mechanism is the connection rather than a file watcher in the browser: the
+page holds an EventSource open against `/dev/events`, and coming back after the
+stream drops is what means "there is new code". That endpoint sits outside
+`/api` because EventSource cannot send the session token, so it is only ever
+created when the app is started with `--dev` — a test asserts it is absent
+otherwise. The dev port is fixed (4810, or `SHOPWISE_DEV_PORT`) because the
+window's URL has to survive the restarts.
 
 ## Tests
 

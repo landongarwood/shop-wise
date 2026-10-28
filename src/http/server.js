@@ -16,10 +16,11 @@ const MAX_BODY_BYTES = 1024 * 1024;
  * by any site the user happens to have open in a browser.
  */
 class HttpServer {
-  constructor({ router, staticFiles, sessionToken, logger, host = '127.0.0.1', port = 0 }) {
+  constructor({ router, staticFiles, sessionToken, logger, devChannel = null, host = '127.0.0.1', port = 0 }) {
     this.router = router;
     this.staticFiles = staticFiles;
     this.sessionToken = sessionToken;
+    this.devChannel = devChannel;
     this.logger = logger;
     this.host = host;
     this.port = port;
@@ -58,6 +59,11 @@ class HttpServer {
   async #handle(request, response) {
     const url = new URL(request.url, `http://${this.host}`);
     const pathname = decodeURIComponent(url.pathname);
+
+    // Only ever set in dev; see http/dev-reload.js for why it sits outside /api.
+    if (this.devChannel?.handles(pathname)) {
+      return this.devChannel.stream(request, response);
+    }
 
     if (!pathname.startsWith('/api/')) {
       if (request.method !== 'GET' && request.method !== 'HEAD') {

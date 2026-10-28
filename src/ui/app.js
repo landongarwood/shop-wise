@@ -2,6 +2,7 @@ import { ApiClient } from './core/api-client.js';
 import { createFormat } from './core/format.js';
 import { Navigator } from './core/navigator.js';
 import { initTheme } from './core/theme.js';
+import { connectDevReload } from './core/dev-reload.js';
 import { toastError } from './core/toast.js';
 import { div, append } from './core/dom.js';
 import { routes } from './screens/index.js';
@@ -13,6 +14,7 @@ import { routes } from './screens/index.js';
  */
 async function boot() {
   initTheme();
+  connectDevReload();
 
   const api = new ApiClient();
 
