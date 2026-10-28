@@ -224,7 +224,7 @@ async function main() {
 
   text = await page.text();
   check('the usual price is pre-filled', text.includes('Usually $12.00'), text.slice(0, 220));
-  check('stock on hand is shown while selling', text.includes('20 in stock'));
+  check('stock on hand is shown while selling, with its unit', text.includes('20 kg in stock'), text.slice(0, 220));
 
   // 3 kg at a negotiated 11.50 rather than the usual 12.00.
   await page.evaluate(`window.__fill('.sheet .stepper__input', '3')`);
