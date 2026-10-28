@@ -2,7 +2,7 @@ import { div, button, append, clear } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { toastOk, toastWarn } from '../core/toast.js';
 import { openCustomerPicker, productList } from '../widgets/pickers.js';
-import { openAddStockSheet, openNewProductSheet, openSaleLineSheet } from '../widgets/forms.js';
+import { openNewProductSheet, openSaleLineSheet } from '../widgets/forms.js';
 import { emptyState } from '../widgets/states.js';
 import { createSteps } from '../widgets/steps.js';
 
@@ -251,15 +251,14 @@ export async function sell(ctx) {
    * shop holds less than nothing, and the mistake only surfaces as a warning
    * after the sale is already saved.
    *
-   * Tapping it is still the way forward, though — it offers to take the stock
-   * in, which is both the fix and the record of what arrived.
+   * Tapping it says so and nothing else. This used to open the take-in-stock
+   * sheet, on the reasoning that restocking is the way forward — but someone
+   * halfway through a sale who taps a product and is handed a different job
+   * has lost the thread, and may well take stock in without meaning to.
+   * Taking in a delivery is its own screen; this one sells.
    */
-  const offerToRestock = async (product) => {
-    const entry = await openAddStockSheet({ api, product, format, onHand: product.onHand });
-    if (!entry) return;
-
-    toastOk(`${format.quantity(entry.quantity)} of ${product.name} taken in`);
-    await ctx.reload();
+  const sayItIsEmpty = (product) => {
+    toastWarn(`${product.name} is out of stock. Add stock first, then sell it.`);
   };
 
   picker = productList({
@@ -267,7 +266,7 @@ export async function sell(ctx) {
     format,
     onPick: addLine,
     unavailable: (product) => product.onHand <= 0,
-    onUnavailable: offerToRestock,
+    onUnavailable: sayItIsEmpty,
     onNew: async () => {
       if (await openNewProductSheet({ api })) ctx.reload();
     },

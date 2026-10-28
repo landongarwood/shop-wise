@@ -136,8 +136,21 @@ export async function openSaleLineSheet({ product, format, initial = null, onHan
   // Not more than is on the shelf. Stock that the books have not caught up
   // with is taken in on the stock screen, where it leaves a record, rather
   // than conjured by a sale that makes the figures impossible.
+  //
+  // Asking for too much is said out loud, not quietly rounded down. The
+  // stepper used to be capped at what was in stock, so typing 10 against 5 on
+  // the shelf turned into 5 the moment the field lost focus — which is how
+  // someone sells half of what they meant to and never finds out.
   const limit = typeof onHand === 'number' ? onHand : Infinity;
-  const quantity = createStepper({ value: Math.min(initial?.quantity ?? 1, limit), step: 1, min: 0, max: limit });
+  const unit = product.unit ?? '';
+  const quantity = createStepper({
+    value: Math.min(initial?.quantity ?? 1, limit),
+    step: 1,
+    min: 0,
+    // The plus and minus buttons set the value themselves, so no input event
+    // is fired and the figures below have to be told.
+    onChange: () => recalculate(),
+  });
   const price = field({
     labelText: `Price per ${product.unit || 'item'}`,
     inputMode: 'decimal',
@@ -151,10 +164,29 @@ export async function openSaleLineSheet({ product, format, initial = null, onHan
   ]);
   const totalValue = total.lastChild;
 
+  /** The line under the stepper: what is in stock, or why this will not do. */
+  const stockHint = div({ class: 'field__hint' });
+
+  const tooMuch = () => quantity.value > limit;
+
+  const describeStock = (problem = null) => {
+    const message = problem
+      ? problem
+      : tooMuch()
+        ? `Only ${format.quantityWithUnit(limit, unit)} in stock. Take in more on the stock screen first.`
+        : onHand === null
+          ? ''
+          : `${format.quantityWithUnit(onHand, unit)} in stock`;
+
+    stockHint.textContent = message;
+    stockHint.style.color = problem || tooMuch() ? 'var(--debt)' : '';
+  };
+
   const recalculate = () => {
     const minor = Math.round(Number(price.value.replace(',', '.')) * 100);
     const amount = Number.isFinite(minor) ? Math.round(minor * quantity.value) : 0;
     totalValue.textContent = format.money(amount);
+    describeStock();
   };
 
   quantity.field.addEventListener('input', recalculate);
@@ -164,9 +196,7 @@ export async function openSaleLineSheet({ product, format, initial = null, onHan
     div({ class: 'section' }, [
       div({ class: 'field__label', text: `How many ${product.unit || 'items'}?` }),
       quantity.node,
-      onHand === null
-        ? null
-        : div({ class: 'field__hint', text: `${format.quantity(onHand)} ${product.unit ?? ''} in stock`.trim() }),
+      stockHint,
     ]),
     price.node,
     total,
@@ -181,15 +211,13 @@ export async function openSaleLineSheet({ product, format, initial = null, onHan
     onConfirm: () => {
       price.showProblem(null);
 
-      if (!(quantity.value > 0)) return false;
+      if (!(quantity.value > 0)) {
+        describeStock(`Enter how many ${product.unit || 'items'} they are taking.`);
+        return false;
+      }
 
-      if (quantity.value > limit) {
-        price.showProblem(
-          `Only ${format.quantity(limit)} ${product.unit ?? ''} in stock. Take in more on the stock screen first.`.replace(
-            '  ',
-            ' '
-          )
-        );
+      if (tooMuch()) {
+        describeStock();
         return false;
       }
 
