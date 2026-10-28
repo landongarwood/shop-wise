@@ -74,7 +74,7 @@ export async function customer(ctx) {
 
   return {
     title: person.name,
-    subtitle: person.phone || position.text,
+    subtitle: position.text,
     actions: [{ label: 'Edit customer', icon: 'edit', onClick: () => editCustomer({ api, person, reload }) }],
     body: div({}, [headline, quickActions, history]),
   };
@@ -117,11 +117,10 @@ function eventRow(entry, { api, format, reload }, person) {
 
 async function editCustomer({ api, person, reload }) {
   const name = field({ labelText: 'Customer name', value: person.name });
-  const phone = field({ labelText: 'Phone', value: person.phone ?? '' });
 
   const saved = await openSheet({
     title: 'Edit customer',
-    body: div({}, [name.node, phone.node]),
+    body: name.node,
     confirmLabel: 'Save changes',
     onConfirm: async () => {
       name.showProblem(null);
@@ -130,7 +129,7 @@ async function editCustomer({ api, person, reload }) {
         return false;
       }
       try {
-        return await api.patch(`/customers/${person.id}`, { name: name.value, phone: phone.value });
+        return await api.patch(`/customers/${person.id}`, { name: name.value });
       } catch (err) {
         name.showProblem(err.message);
         return false;

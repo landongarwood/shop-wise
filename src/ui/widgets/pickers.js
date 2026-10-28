@@ -178,17 +178,14 @@ export async function openCustomerPicker({ api, format, title = 'Which customer?
     title,
     items: customers,
     placeholder: 'Search customers',
-    searchOn: (customer) => `${customer.name} ${customer.phone ?? ''}`,
+    searchOn: (customer) => customer.name,
     emptyTitle: 'No customers yet.',
     newLabel: 'New customer',
     onNew: () => openNewCustomerSheet({ api }),
     renderRow: (customer) => {
       const position = format.balance(customer.balance);
       return [
-        div({ class: 'row__main' }, [
-          div({ class: 'row__title', text: customer.name }),
-          customer.phone ? div({ class: 'row__sub', text: customer.phone }) : null,
-        ]),
+        div({ class: 'row__main' }, div({ class: 'row__title', text: customer.name })),
         badge(position.text, position.tone),
       ];
     },

@@ -16,7 +16,7 @@ export async function settings(ctx) {
   const current = meta.settings;
 
   const shopName = input({ class: 'input', type: 'text', value: current.shopName ?? '', maxLength: 60 });
-  const currency = input({ class: 'input', type: 'text', value: current.currency ?? '$', maxLength: 4 });
+  const currency = input({ class: 'input', type: 'text', value: current.currency ?? '¥', maxLength: 4 });
   const lowStockAt = input({
     class: 'input tnum',
     type: 'text',
@@ -38,7 +38,7 @@ export async function settings(ctx) {
     try {
       await api.patch('/settings', {
         shopName: shopName.value.trim() || 'My Shop',
-        currency: currency.value.trim() || '$',
+        currency: currency.value.trim() || '¥',
         lowStockAt: Number(lowStockAt.value.trim() || 0),
       });
 
@@ -63,7 +63,7 @@ export async function settings(ctx) {
       label({ class: 'field' }, [
         span({ class: 'field__label', text: 'Currency symbol' }),
         currency,
-        div({ class: 'field__hint', text: `Amounts will read like ${currency.value || '$'}1,250.00` }),
+        div({ class: 'field__hint', text: `Amounts will read like ${currency.value || '¥'}1,250.00` }),
       ]),
       label({ class: 'field' }, [
         span({ class: 'field__label', text: 'Warn me when stock falls to' }),

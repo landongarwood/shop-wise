@@ -66,7 +66,7 @@ describe('the HTTP API', () => {
     const product = await call('POST', '/products', { name: 'Milk', unit: 'L', price: '1.40' });
     assert.equal(product.status, 201);
 
-    const customer = await call('POST', '/customers', { name: 'Cafe Nero', phone: '555' });
+    const customer = await call('POST', '/customers', { name: 'Cafe Nero' });
     assert.equal(customer.status, 201);
 
     assert.equal((await call('POST', '/stock', { productId: product.payload.id, quantity: 30 })).status, 201);

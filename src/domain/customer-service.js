@@ -22,7 +22,6 @@ class CustomerService {
 
   async create(input) {
     const name = validate.text(input?.name, 'customer name');
-    const phone = validate.text(input?.phone, 'phone', { required: false, max: 40 });
     const note = validate.text(input?.note, 'note', { required: false, max: 300 });
 
     this.#refuseDuplicateName(name);
@@ -30,7 +29,6 @@ class CustomerService {
     return this.customers.add({
       id: this.ids.next(),
       name,
-      phone,
       note,
       archived: false,
       createdAt: this.clock.now().toISOString(),
@@ -44,9 +42,6 @@ class CustomerService {
     if (input?.name !== undefined) {
       changes.name = validate.text(input.name, 'customer name');
       this.#refuseDuplicateName(changes.name, id);
-    }
-    if (input?.phone !== undefined) {
-      changes.phone = validate.text(input.phone, 'phone', { required: false, max: 40 });
     }
     if (input?.note !== undefined) {
       changes.note = validate.text(input.note, 'note', { required: false, max: 300 });

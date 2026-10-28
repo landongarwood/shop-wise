@@ -72,7 +72,7 @@ export async function customers(ctx) {
   const visible = () =>
     people
       .filter(FILTERS.find((candidate) => candidate.key === filter).test)
-      .filter((person) => `${person.name} ${person.phone ?? ''}`.toLowerCase().includes(term));
+      .filter((person) => person.name.toLowerCase().includes(term));
 
   const search = input({
     class: 'input input--search',
@@ -142,12 +142,6 @@ export async function customers(ctx) {
         cell: (person) => person.name,
       },
       {
-        key: 'phone',
-        label: 'Phone',
-        sort: by.text((person) => person.phone),
-        cell: (person) => span({ class: 'table__sub', text: person.phone || '—' }),
-      },
-      {
         key: 'charged',
         label: 'Bought',
         numeric: true,
@@ -186,17 +180,18 @@ export async function customers(ctx) {
         key: 'pay',
         label: '',
         width: '1%',
+        // Always offered. A customer who owes nothing can still hand over money
+        // — that is what paying ahead is — so hiding this would make a normal
+        // thing look impossible.
         cell: (person) =>
-          person.balance > 0
-            ? button(
-                {
-                  class: 'table__action',
-                  title: `Record a payment from ${person.name}`,
-                  onclick: () => go('payment', { customer: person }),
-                },
-                ['Take payment']
-              )
-            : '',
+          button(
+            {
+              class: 'table__action',
+              title: `Record a payment from ${person.name}`,
+              onclick: () => go('payment', { customer: person }),
+            },
+            ['Take payment']
+          ),
       },
     ],
   });

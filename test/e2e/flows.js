@@ -176,11 +176,13 @@ async function launchBrowser(url) {
 async function seed(services) {
   const coffee = await services.catalog.create({ name: 'Coffee beans', unit: 'kg', price: '12.00' });
   await services.catalog.create({ name: 'Paper cups', unit: 'pcs', price: '0.15' });
-  const alice = await services.customers.create({ name: 'Alice Mwangi', phone: '0700 111 222' });
+  const alice = await services.customers.create({ name: 'Alice Mwangi' });
   await services.customers.create({ name: 'Bob Otieno' });
 
   await services.inventory.addStock({ productId: coffee.id, quantity: 20 });
-  await services.settings.update({ shopName: 'Corner Cafe' });
+  // The currency is pinned here rather than inherited: these checks read
+  // amounts literally, and changing the shop's default should not break them.
+  await services.settings.update({ shopName: 'Corner Cafe', currency: '$' });
 
   return { coffee, alice };
 }

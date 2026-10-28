@@ -104,11 +104,10 @@ export async function openNewProductSheet({ api }) {
 
 export async function openNewCustomerSheet({ api }) {
   const name = field({ labelText: 'Customer name', placeholder: 'e.g. Alice', autocomplete: 'off' });
-  const phone = field({ labelText: 'Phone (optional)', inputMode: 'tel', autocomplete: 'off' });
 
   return openSheet({
     title: 'New customer',
-    body: div({}, [name.node, phone.node]),
+    body: name.node,
     confirmLabel: 'Add customer',
     onConfirm: async () => {
       name.showProblem(null);
@@ -118,7 +117,7 @@ export async function openNewCustomerSheet({ api }) {
       }
 
       try {
-        return await api.post('/customers', { name: name.value, phone: phone.value });
+        return await api.post('/customers', { name: name.value });
       } catch (err) {
         name.showProblem(err.message);
         return false;

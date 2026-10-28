@@ -28,7 +28,7 @@ async function createShop(options = {}) {
 
   const coffee = await catalog.create({ name: 'Coffee beans', unit: 'kg', price: '12.00' });
   const cups = await catalog.create({ name: 'Paper cups', unit: 'pcs', price: '0.15' });
-  const alice = await customers.create({ name: 'Alice', phone: '0700 111 222' });
+  const alice = await customers.create({ name: 'Alice' });
   const bob = await customers.create({ name: 'Bob' });
 
   await inventory.addStock({ productId: coffee.id, quantity: 20 });

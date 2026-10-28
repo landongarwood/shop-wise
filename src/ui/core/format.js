@@ -7,7 +7,7 @@
  */
 
 export function createFormat(settings) {
-  const currency = settings?.currency || '$';
+  const currency = settings?.currency || '¥';
 
   const amounts = new Intl.NumberFormat(undefined, {
     minimumFractionDigits: 2,

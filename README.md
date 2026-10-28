@@ -25,7 +25,7 @@ And three screens to look things up on:
 | | |
 | --- | --- |
 | **Stock** | Every product with price, taken in, sold, on hand and value. Search, filter to what is Low or Out, sort any column, and take a delivery in from the row itself. |
-| **Customers** | Everyone with bought, paid and balance, biggest debt first, with a Take payment button on anyone who owes. |
+| **Customers** | Everyone with bought, paid and balance, biggest debt first, with a Take payment button on every row. |
 | **One customer** | Balance as a headline, then sales and payments on one timeline with the balance as it stood after each — so a disputed total can be read down until you disagree. |
 | **Sales report** | One ledger of every sale line: date, product, customer, quantity, price, total. Narrow it by period, by product, by customer, or all three, and sort any column. |
 
