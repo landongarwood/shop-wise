@@ -311,11 +311,49 @@ async function main() {
   await page.click('.tile', 'Sales report');
 
   text = await page.text();
-  const lower = text.toLowerCase();
-  check('the report totals the period', text.includes('$34.50'), text.slice(0, 300));
-  // Headings are uppercased by CSS and innerText reflects that, hence the fold.
-  check('the report breaks sales down by product', text.includes('Coffee beans') && lower.includes('what sold'));
-  check('the report breaks sales down by customer', lower.includes('who bought'));
+  check('the ledger totals the period', text.includes('$34.50'), text.slice(0, 300));
+  check('one table, with the product and the customer on the same row', text.includes('Coffee beans') && text.includes('Alice Mwangi'));
+  check(
+    'it really is a single table',
+    (await page.evaluate(`document.querySelectorAll('.screen table').length`)) === 1
+  );
+
+  const headings = await page.evaluate(
+    `JSON.stringify([...document.querySelectorAll('.screen th')].map((th) => th.textContent.replace(/[▲▼]/g, '').trim()))`
+  );
+  check(
+    'the columns are date, product, customer, qty, price, total',
+    JSON.parse(headings).join(',') === 'Date,Product,Customer,Qty,Price,Total',
+    headings
+  );
+
+  // Narrowing to a customer who bought nothing should empty the table.
+  const bobOption = await page.evaluate(`
+    (() => {
+      const select = [...document.querySelectorAll('select')].find((node) => node.options[0].text === 'All customers');
+      const option = [...select.options].find((candidate) => candidate.text.startsWith('Bob'));
+      return option ? option.value : null;
+    })()
+  `);
+  check('the customer filter lists who bought in the period', bobOption === null, 'Bob bought nothing, so he is not offered');
+
+  const aliceOption = await page.evaluate(`
+    (() => {
+      const select = [...document.querySelectorAll('select')].find((node) => node.options[0].text === 'All customers');
+      const option = [...select.options].find((candidate) => candidate.text.startsWith('Alice'));
+      if (!option) return null;
+      select.value = option.value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      return option.value;
+    })()
+  `);
+  check('the customer filter offers Alice', Boolean(aliceOption));
+
+  await wait(700);
+  await page.installHelpers();
+  text = await page.text();
+  check('filtering by customer keeps her line', text.includes('Coffee beans') && text.includes('$34.50'), text.slice(0, 300));
+  check('and offers a way back out', text.includes('Clear filters'));
 
   await page.click('.chip', 'Today');
   text = await page.text();

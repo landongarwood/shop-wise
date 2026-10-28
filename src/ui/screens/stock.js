@@ -154,7 +154,6 @@ export async function stock(ctx) {
       {
         key: 'name',
         label: 'Product',
-        grow: true,
         sort: by.text((product) => product.name),
         cell: (product) => product.name,
       },

@@ -35,107 +35,159 @@ async function shopWithSales() {
   return shop;
 }
 
-describe('sales report', () => {
-  test('covers the asked-for month and nothing either side of it', async () => {
+describe('the sales ledger', () => {
+  test('gives one row per line of a sale', async () => {
     const { services } = await shopWithSales();
     const report = services.reports.sales({ preset: 'month' });
 
-    assert.equal(report.range.label, 'This month');
-    assert.equal(report.totals.salesCount, 2, 'February must be excluded');
-    assert.equal(report.totals.salesTotal, 2400 + 1000 + 1500);
-    assert.equal(report.totals.paymentsTotal, 2000);
+    // Two sales this month, but the second had two products on it.
+    assert.equal(report.totals.saleCount, 2);
+    assert.equal(report.totals.lineCount, 3);
+    assert.equal(report.lines.length, 3);
   });
 
-  test('last month is its own period', async () => {
-    const { services } = await shopWithSales();
-    const report = services.reports.sales({ preset: 'lastMonth' });
+  test('each row carries the product, customer, quantity, price and date', async () => {
+    const { services, bob, coffee } = await shopWithSales();
+    const report = services.reports.sales({ preset: 'month' });
 
-    assert.equal(report.totals.salesCount, 1);
-    assert.equal(report.totals.salesTotal, 3000);
+    const line = report.lines.find((row) => row.customerId === bob.id && row.productId === coffee.id);
+
+    assert.equal(line.productName, 'Coffee beans');
+    assert.equal(line.customerName, 'Bob');
+    assert.equal(line.quantity, 1);
+    assert.equal(line.unit, 'kg');
+    assert.equal(line.unitPrice, 1000, 'the price it actually went out at');
+    assert.equal(line.lineTotal, 1000);
+    assert.equal(line.at.slice(0, 10), '2026-03-10');
   });
 
-  test('all time adds everything up', async () => {
+  test('rows come back newest first', async () => {
     const { services } = await shopWithSales();
-    const report = services.reports.sales({ preset: 'all' });
+    const days = services.reports.sales({ preset: 'all' }).lines.map((line) => line.at.slice(0, 10));
 
-    assert.equal(report.totals.salesCount, 3);
-    assert.equal(report.totals.salesTotal, 2400 + 2500 + 3000);
-    assert.equal(report.range.from, null);
+    assert.deepEqual(days, [...days].sort().reverse());
+  });
+
+  test('covers the asked-for period and nothing either side of it', async () => {
+    const { services } = await shopWithSales();
+
+    assert.equal(services.reports.sales({ preset: 'month' }).totals.salesTotal, 2400 + 1000 + 1500);
+    assert.equal(services.reports.sales({ preset: 'lastMonth' }).totals.salesTotal, 3000);
+    assert.equal(services.reports.sales({ preset: 'all' }).totals.lineCount, 4);
   });
 
   test('a custom range includes both end days in full', async () => {
     const { services } = await shopWithSales();
 
-    assert.equal(services.reports.sales({ from: '2026-03-10', to: '2026-03-10' }).totals.salesCount, 1);
-    assert.equal(services.reports.sales({ from: '2026-03-02', to: '2026-03-09' }).totals.salesCount, 1);
-    assert.equal(services.reports.sales({ from: '2026-03-02', to: '2026-03-10' }).totals.salesCount, 2);
+    assert.equal(services.reports.sales({ from: '2026-03-10', to: '2026-03-10' }).totals.saleCount, 1);
+    assert.equal(services.reports.sales({ from: '2026-03-02', to: '2026-03-09' }).totals.saleCount, 1);
+    assert.equal(services.reports.sales({ from: '2026-03-02', to: '2026-03-10' }).totals.saleCount, 2);
   });
 
-  test('ranks products by the money they brought in', async () => {
-    const { services, coffee, cups } = await shopWithSales();
-    const report = services.reports.sales({ preset: 'all' });
+  test('narrows to one product', async () => {
+    const { services, coffee } = await shopWithSales();
+    const report = services.reports.sales({ preset: 'all', productId: coffee.id });
+
+    assert.equal(report.totals.lineCount, 2);
+    assert.ok(report.lines.every((line) => line.productId === coffee.id));
+    assert.equal(report.totals.salesTotal, 2400 + 1000);
+    assert.equal(report.totals.itemCount, 3);
+  });
+
+  test('narrows to one customer, including every line of their sales', async () => {
+    const { services, bob } = await shopWithSales();
+    const report = services.reports.sales({ preset: 'all', customerId: bob.id });
+
+    assert.equal(report.totals.lineCount, 2, "both lines of Bob's one sale");
+    assert.equal(report.totals.saleCount, 1);
+    assert.equal(report.totals.salesTotal, 2500);
+  });
+
+  test('narrows to a product and a customer together', async () => {
+    const { services, alice, cups } = await shopWithSales();
+    const report = services.reports.sales({ preset: 'all', customerId: alice.id, productId: cups.id });
+
+    assert.equal(report.totals.lineCount, 1);
+    assert.equal(report.totals.salesTotal, 3000);
+  });
+
+  test('offers every product and customer in the period as a filter', async () => {
+    const { services } = await shopWithSales();
+    const { options } = services.reports.sales({ preset: 'month' });
 
     assert.deepEqual(
-      report.byProduct.map((row) => [row.productName, row.quantity, row.revenue]),
+      options.products.map((option) => [option.name, option.count]),
       [
-        ['Coffee beans', 3, 3400],
-        ['Paper cups', 300, 4500],
-      ].sort((a, b) => b[2] - a[2])
+        ['Coffee beans', 2],
+        ['Paper cups', 1],
+      ]
     );
+    assert.deepEqual(
+      options.customers.map((option) => [option.name, option.count]),
+      [
+        ['Alice', 1],
+        ['Bob', 2],
+      ]
+    );
+  });
 
-    const coffeeRow = report.byProduct.find((row) => row.productId === coffee.id);
-    // 2 at 12.00 plus 1 at 10.00 = 34.00 over 3 kg, so 11.33 each on average.
-    assert.equal(coffeeRow.revenue, 3400);
-    assert.equal(coffeeRow.averagePrice, 1133);
+  test('the filter options stay the same when a filter is applied, so it can be changed', async () => {
+    const { services, coffee } = await shopWithSales();
+    const report = services.reports.sales({ preset: 'month', productId: coffee.id });
 
-    assert.equal(report.byProduct.find((row) => row.productId === cups.id).quantity, 300);
+    assert.equal(report.options.products.length, 2, 'the other product is still offered');
+    assert.equal(report.filters.productId, coffee.id);
   });
 
   test('uses the price each line actually sold at, not the current one', async () => {
     const { services, coffee } = await shopWithSales();
 
     await services.catalog.update(coffee.id, { price: '99.00' });
-    const report = services.reports.sales({ preset: 'all' });
+    const report = services.reports.sales({ preset: 'all', productId: coffee.id });
 
-    assert.equal(report.byProduct.find((row) => row.productId === coffee.id).revenue, 3400);
+    assert.equal(report.totals.salesTotal, 3400);
   });
 
-  test('ranks customers by what they bought', async () => {
-    const { services, alice } = await shopWithSales();
-    const report = services.reports.sales({ preset: 'all' });
+  test('payments follow the period and the customer, but not the product', async () => {
+    const { services, alice, coffee } = await shopWithSales();
 
-    assert.equal(report.byCustomer[0].customerId, alice.id);
-    assert.equal(report.byCustomer[0].total, 2400 + 3000);
-    assert.equal(report.byCustomer[0].saleCount, 2);
-  });
+    const everything = services.reports.sales({ preset: 'month' });
+    assert.equal(everything.totals.paymentsTotal, 2000);
+    assert.equal(everything.totals.paymentsApplyToFilter, true);
 
-  test('gives one row per active day, oldest first', async () => {
-    const { services } = await shopWithSales();
-    const report = services.reports.sales({ preset: 'month' });
+    const forAlice = services.reports.sales({ preset: 'month', customerId: alice.id });
+    assert.equal(forAlice.totals.paymentsTotal, 2000);
 
-    assert.deepEqual(
-      report.byDay.map((row) => [row.day, row.salesTotal, row.paymentsTotal]),
-      [
-        ['2026-03-02', 2400, 0],
-        ['2026-03-10', 2500, 0],
-        ['2026-03-11', 0, 2000],
-      ]
-    );
-  });
-
-  test('counts the units that went out', async () => {
-    const { services } = await shopWithSales();
-
-    assert.equal(services.reports.sales({ preset: 'all' }).totals.itemCount, 303);
+    // A payment is never tied to a product, so the report says so rather than
+    // showing a figure that does not match the rows.
+    const forCoffee = services.reports.sales({ preset: 'month', productId: coffee.id });
+    assert.equal(forCoffee.totals.paymentsApplyToFilter, false);
   });
 
   test('an empty period reports zeroes rather than failing', async () => {
     const { services } = await shopWithSales();
     const report = services.reports.sales({ from: '2026-01-01', to: '2026-01-31' });
 
-    assert.equal(report.totals.salesCount, 0);
+    assert.equal(report.totals.lineCount, 0);
     assert.equal(report.totals.salesTotal, 0);
-    assert.deepEqual(report.byProduct, []);
+    assert.deepEqual(report.lines, []);
+    assert.deepEqual(report.options.products, []);
+  });
+
+  test('caps how many rows come back and says when it did', async () => {
+    const shop = await createShop({ at: AT });
+    const { sales, inventory } = shop.services;
+
+    await inventory.addStock({ productId: shop.coffee.id, quantity: 1000 });
+    for (let i = 0; i < 12; i += 1) {
+      await sales.record({ customerId: shop.alice.id, items: [{ productId: shop.coffee.id, quantity: 1 }] });
+    }
+
+    const report = shop.services.reports.sales({ preset: 'all', limit: 5 });
+
+    assert.equal(report.lines.length, 5);
+    assert.equal(report.totals.lineCount, 12, 'the totals still describe everything');
+    assert.equal(report.truncated, true);
   });
 
   test('rejects a nonsense period', async () => {

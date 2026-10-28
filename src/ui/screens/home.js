@@ -71,7 +71,7 @@ export async function home(ctx) {
     button({ class: 'tile', onclick: () => go('reports', { preset: 'month' }) }, [
       div({ class: 'tile__icon' }, icon('receipt', { size: 26 })),
       div({ class: 'tile__label', text: 'Sales report' }),
-      div({ class: 'tile__hint', text: 'What sold, over any period' }),
+      div({ class: 'tile__hint', text: 'Every line sold, any period' }),
     ]),
   ]);
 

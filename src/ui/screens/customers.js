@@ -138,7 +138,6 @@ export async function customers(ctx) {
       {
         key: 'name',
         label: 'Customer',
-        grow: true,
         sort: by.text((person) => person.name),
         cell: (person) => person.name,
       },

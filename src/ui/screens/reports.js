@@ -1,14 +1,18 @@
-import { div, button, input, append, span } from '../core/dom.js';
+import { div, button, input, span, el } from '../core/dom.js';
 import { stat, emptyState } from '../widgets/states.js';
 import { dataTable, by } from '../widgets/table.js';
 
 /**
- * What sold, over whatever stretch of time you ask for.
+ * The sales ledger.
  *
- * The periods people actually ask for are one tap each; a custom range is there
- * for everything else. Below the totals, products are ranked by the money they
- * brought in, which answers "what should I reorder" and "what is not worth
- * stocking" at the same time.
+ * One table, one row per line of a sale, so "what went out and to whom" is a
+ * single list that can be sorted and narrowed rather than several summaries to
+ * read past. Date first, because that is the default order and what the eye
+ * returns to; the names next; the figures together on the right where they can
+ * be compared down a column.
+ *
+ * Period, product and customer all narrow the same table, and every figure
+ * above it describes exactly the rows on show.
  */
 const PERIODS = [
   { preset: 'today', label: 'Today' },
@@ -24,26 +28,38 @@ export async function reports(ctx) {
   const { api, format, go, params } = ctx;
 
   const preset = params.from || params.to ? null : params.preset ?? 'month';
+
   const query = new URLSearchParams();
   if (preset) query.set('preset', preset);
   if (params.from) query.set('from', params.from);
   if (params.to) query.set('to', params.to);
+  if (params.productId) query.set('productId', params.productId);
+  if (params.customerId) query.set('customerId', params.customerId);
 
   const report = await api.get(`/reports/sales?${query}`);
 
-  /* ---------- period controls ---------- */
+  /** Re-opens this screen with one thing changed and everything else kept. */
+  const applyFilter = (changes) =>
+    go(
+      'reports',
+      {
+        ...(preset ? { preset } : { from: params.from, to: params.to }),
+        productId: params.productId,
+        customerId: params.customerId,
+        ...changes,
+      },
+      { replace: true }
+    );
+
+  /* ---------- period ---------- */
 
   const chips = div(
     { class: 'chips', style: { marginBottom: 'var(--space-3)' } },
     PERIODS.map((period) =>
       button({
-        class: 'chip',
+        class: `chip${preset === period.preset ? ' chip--active' : ''}`,
         text: period.label,
-        style:
-          preset === period.preset
-            ? { background: 'var(--accent)', borderColor: 'transparent', color: 'var(--accent-text)' }
-            : {},
-        onclick: () => go('reports', { preset: period.preset }, { replace: true }),
+        onclick: () => applyFilter({ preset: period.preset, from: undefined, to: undefined }),
       })
     )
   );
@@ -51,18 +67,71 @@ export async function reports(ctx) {
   const from = input({ class: 'input', type: 'date', value: params.from ?? report.range.from ?? '', ariaLabel: 'From' });
   const to = input({ class: 'input', type: 'date', value: params.to ?? report.range.to ?? '', ariaLabel: 'To' });
 
-  const custom = div({ class: 'inline', style: { marginBottom: 'var(--space-5)' } }, [
-    span({ class: 'faint', text: 'or pick dates' }),
-    div({ style: { width: 'min(170px, 38vw)' } }, from),
-    span({ class: 'faint', text: 'to' }),
-    div({ style: { width: 'min(170px, 38vw)' } }, to),
-    button({
-      class: 'button',
-      text: 'Show',
-      onclick: () => {
-        if (from.value && to.value) go('reports', { from: from.value, to: to.value }, { replace: true });
+  /* ---------- product / customer ---------- */
+
+  const chooser = ({ label, options, selected, allLabel, onPick }) => {
+    const control = el(
+      'select',
+      {
+        class: 'input input--select',
+        ariaLabel: label,
+        onchange: () => onPick(control.value || undefined),
       },
-    }),
+      [
+        el('option', { value: '', text: allLabel }),
+        ...options.map((option) =>
+          el('option', {
+            value: option.id,
+            text: `${option.name} (${option.count})`,
+            selected: option.id === selected,
+          })
+        ),
+      ]
+    );
+    return control;
+  };
+
+  const productChooser = chooser({
+    label: 'Filter by product',
+    options: report.options.products,
+    selected: params.productId,
+    allLabel: 'All products',
+    onPick: (productId) => applyFilter({ productId }),
+  });
+
+  const customerChooser = chooser({
+    label: 'Filter by customer',
+    options: report.options.customers,
+    selected: params.customerId,
+    allLabel: 'All customers',
+    onPick: (customerId) => applyFilter({ customerId }),
+  });
+
+  const filtered = Boolean(params.productId || params.customerId);
+
+  const toolbar = div({ class: 'toolbar' }, [
+    div({ class: 'toolbar__field' }, productChooser),
+    div({ class: 'toolbar__field' }, customerChooser),
+    div({ class: 'inline' }, [
+      span({ class: 'faint', text: 'dates' }),
+      div({ style: { width: 'min(158px, 36vw)' } }, from),
+      span({ class: 'faint', text: 'to' }),
+      div({ style: { width: 'min(158px, 36vw)' } }, to),
+      button({
+        class: 'button',
+        text: 'Show',
+        onclick: () => {
+          if (from.value && to.value) applyFilter({ from: from.value, to: to.value, preset: undefined });
+        },
+      }),
+    ]),
+    filtered
+      ? button({
+          class: 'button button--quiet',
+          text: 'Clear filters',
+          onclick: () => applyFilter({ productId: undefined, customerId: undefined }),
+        })
+      : null,
   ]);
 
   /* ---------- figures ---------- */
@@ -71,182 +140,112 @@ export async function reports(ctx) {
     stat({
       label: 'Sold',
       value: format.money(report.totals.salesTotal),
-      hint: `${report.totals.salesCount} ${report.totals.salesCount === 1 ? 'sale' : 'sales'}`,
+      hint: `${report.totals.saleCount} ${report.totals.saleCount === 1 ? 'sale' : 'sales'}`,
     }),
     stat({
       label: 'Items out',
       value: format.quantity(report.totals.itemCount),
-      hint: 'units across all products',
+      hint: `over ${report.totals.lineCount} ${report.totals.lineCount === 1 ? 'line' : 'lines'}`,
     }),
     stat({
       label: 'Paid to you',
       value: format.money(report.totals.paymentsTotal),
-      hint: `${report.totals.paymentsCount} ${report.totals.paymentsCount === 1 ? 'payment' : 'payments'}`,
+      hint: report.totals.paymentsApplyToFilter
+        ? `${report.totals.paymentsCount} ${report.totals.paymentsCount === 1 ? 'payment' : 'payments'}`
+        : 'payments are not recorded per product',
       tone: report.totals.paymentsTotal > 0 ? 'paid' : null,
     }),
     stat({
-      label: 'Still unpaid',
-      value: format.money(Math.max(0, report.totals.salesTotal - report.totals.paymentsTotal)),
-      hint: 'sold minus paid, this period',
-      tone: report.totals.salesTotal > report.totals.paymentsTotal ? 'debt' : null,
+      label: 'Average sale',
+      value: format.money(
+        report.totals.saleCount ? Math.round(report.totals.salesTotal / report.totals.saleCount) : 0
+      ),
     }),
   ]);
 
-  if (!report.totals.salesCount) {
+  const head = div({}, [chips, toolbar, totals]);
+
+  if (!report.lines.length) {
     return {
       title: 'Sales report',
-      subtitle: report.range.label,
+      subtitle: describeRange(report, format),
       body: div({}, [
-        chips,
-        custom,
-        emptyState({ title: `Nothing sold in ${report.range.label.toLowerCase()}`, message: 'Try a longer period.' }),
+        head,
+        emptyState({
+          title: filtered ? 'Nothing matches those filters' : `Nothing sold in ${report.range.label.toLowerCase()}`,
+          message: filtered ? 'Try a wider period, or clear the filters.' : 'Try a longer period.',
+        }),
       ]),
     };
   }
 
-  /* ---------- breakdowns ---------- */
+  /* ---------- the ledger ---------- */
 
-  const productTable = dataTable({
-    rows: report.byProduct,
-    initialSort: { key: 'revenue', direction: 'desc' },
-    scroll: false,
+  const table = dataTable({
+    rows: report.lines,
+    initialSort: { key: 'at', direction: 'desc' },
+    onRowClick: (line) => go('customer', { id: line.customerId }),
     columns: [
-      { key: 'name', label: 'Product', grow: true, sort: by.text((row) => row.productName), cell: (row) => row.productName },
+      {
+        key: 'at',
+        label: 'Date',
+        sort: by.text((line) => line.at),
+        cell: (line) => format.relativeDay(line.at),
+      },
+      {
+        key: 'product',
+        label: 'Product',
+        sort: by.text((line) => line.productName),
+        cell: (line) => line.productName,
+      },
+      {
+        key: 'customer',
+        label: 'Customer',
+        sort: by.text((line) => line.customerName),
+        cell: (line) => line.customerName,
+      },
       {
         key: 'quantity',
-        label: 'Quantity',
+        label: 'Qty',
         numeric: true,
-        sort: by.number((row) => row.quantity),
-        cell: (row) => `${format.quantity(row.quantity)} ${row.unit ?? ''}`.trim(),
+        sort: by.number((line) => line.quantity),
+        cell: (line) => `${format.quantity(line.quantity)} ${line.unit ?? ''}`.trim(),
       },
       {
-        key: 'average',
-        label: 'Average price',
+        key: 'unitPrice',
+        label: 'Price',
         numeric: true,
-        sort: by.number((row) => row.averagePrice),
-        cell: (row) => format.money(row.averagePrice),
+        sort: by.number((line) => line.unitPrice),
+        cell: (line) => format.money(line.unitPrice),
       },
       {
-        key: 'revenue',
-        label: 'Revenue',
-        numeric: true,
-        strong: true,
-        sort: by.number((row) => row.revenue),
-        cell: (row) => format.money(row.revenue),
-      },
-      {
-        key: 'share',
-        label: 'Share',
-        numeric: true,
-        sort: by.number((row) => row.revenue),
-        cell: (row) => shareBar(row.revenue, report.totals.salesTotal),
-      },
-    ],
-  }).node;
-
-  const customerTable = dataTable({
-    rows: report.byCustomer,
-    initialSort: { key: 'total', direction: 'desc' },
-    scroll: false,
-    onRowClick: (row) => go('customer', { id: row.customerId }),
-    columns: [
-      { key: 'name', label: 'Customer', grow: true, sort: by.text((row) => row.customerName), cell: (row) => row.customerName },
-      {
-        key: 'sales',
-        label: 'Sales',
-        numeric: true,
-        sort: by.number((row) => row.saleCount),
-        cell: (row) => String(row.saleCount),
-      },
-      {
-        key: 'total',
+        key: 'lineTotal',
         label: 'Total',
         numeric: true,
         strong: true,
-        sort: by.number((row) => row.total),
-        cell: (row) => format.money(row.total),
-      },
-      {
-        key: 'share',
-        label: 'Share',
-        numeric: true,
-        sort: by.number((row) => row.total),
-        cell: (row) => shareBar(row.total, report.totals.salesTotal),
+        sort: by.number((line) => line.lineTotal),
+        cell: (line) => format.money(line.lineTotal),
       },
     ],
-  }).node;
+  });
 
-  const dayTable =
-    report.byDay.length > 1
-      ? dataTable({
-          rows: report.byDay,
-          initialSort: { key: 'day', direction: 'desc' },
-          scroll: false,
-          columns: [
-            {
-              key: 'day',
-              label: 'Day',
-              grow: true,
-              sort: by.text((row) => row.day),
-              cell: (row) => format.relativeDay(`${row.day}T12:00:00`),
-            },
-            {
-              key: 'count',
-              label: 'Sales',
-              numeric: true,
-              sort: by.number((row) => row.salesCount),
-              cell: (row) => String(row.salesCount),
-            },
-            {
-              key: 'sold',
-              label: 'Sold',
-              numeric: true,
-              strong: true,
-              sort: by.number((row) => row.salesTotal),
-              cell: (row) => format.money(row.salesTotal),
-            },
-            {
-              key: 'paid',
-              label: 'Paid to you',
-              numeric: true,
-              sort: by.number((row) => row.paymentsTotal),
-              cell: (row) =>
-                row.paymentsTotal
-                  ? span({ class: 'money--paid', text: format.money(row.paymentsTotal) })
-                  : span({ class: 'table__sub', text: '—' }),
-            },
-          ],
-        }).node
-      : null;
-
-  const body = div({}, [
-    chips,
-    custom,
-    totals,
-    section('What sold', productTable),
-    section('Who bought', customerTable),
-    dayTable ? section('Day by day', dayTable) : null,
-  ]);
+  const countLine = div({
+    class: 'picker__count',
+    text: report.truncated
+      ? `showing the latest ${report.lines.length} lines — narrow the period to see the rest`
+      : `${report.totals.lineCount} ${report.totals.lineCount === 1 ? 'line' : 'lines'}`,
+  });
 
   return {
     title: 'Sales report',
-    subtitle: `${report.range.label}${report.range.from ? ` · ${format.day(`${report.range.from}T12:00:00`)} to ${format.day(`${report.range.to}T12:00:00`)}` : ''}`,
-    body,
+    subtitle: describeRange(report, format),
+    body: div({}, [head, countLine, table.node]),
   };
 }
 
-function section(title, content) {
-  const node = div({ class: 'section' });
-  append(node, [div({ class: 'section__head' }, div({ class: 'section__title', text: title })), content]);
-  return node;
-}
-
-/** A percentage with a proportional bar behind it: rank is read, not counted. */
-function shareBar(part, whole) {
-  const percent = whole > 0 ? Math.round((part / whole) * 100) : 0;
-
-  return div({ class: 'share' }, [
-    div({ class: 'share__track' }, div({ class: 'share__fill', style: { width: `${percent}%` } })),
-    span({ class: 'share__value tnum', text: `${percent}%` }),
-  ]);
+function describeRange(report, format) {
+  const dates = report.range.from
+    ? ` · ${format.day(`${report.range.from}T12:00:00`)} to ${format.day(`${report.range.to}T12:00:00`)}`
+    : '';
+  return `${report.range.label}${dates}`;
 }

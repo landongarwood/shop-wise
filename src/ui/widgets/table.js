@@ -20,7 +20,6 @@ import { el, div, append, clear } from '../core/dom.js';
  *   sort?: (a: any, b: any) => number,
  *   numeric?: boolean,
  *   strong?: boolean,
- *   grow?: boolean,
  *   width?: string,
  *   title?: string,
  * }>} options.columns
@@ -50,13 +49,7 @@ export function dataTable({
       const sortable = Boolean(column.sort);
       const cell = el('th', {
         scope: 'col',
-        class: [
-          column.numeric ? 'table__num' : '',
-          column.grow ? 'table__grow' : '',
-          sortable ? 'table__th--sortable' : '',
-        ]
-          .join(' ')
-          .trim(),
+        class: [column.numeric ? 'table__num' : '', sortable ? 'table__th--sortable' : ''].join(' ').trim(),
         style: column.width ? { width: column.width } : {},
         title: column.title ?? (sortable ? `Sort by ${column.label}` : ''),
         ariaSort: 'none',
@@ -140,13 +133,7 @@ export function dataTable({
             el(
               'td',
               {
-                class: [
-                  column.numeric ? 'table__num' : '',
-                  column.strong ? 'table__strong' : '',
-                  column.grow ? 'table__grow' : '',
-                ]
-                  .join(' ')
-                  .trim(),
+                class: [column.numeric ? 'table__num' : '', column.strong ? 'table__strong' : ''].join(' ').trim(),
               },
               column.cell(row)
             )

@@ -3,16 +3,24 @@
 const money = require('../shared/money');
 const quantity = require('../shared/quantity');
 const dayRange = require('../shared/day-range');
-const { toLocalDay } = require('../shared/clock');
+const validate = require('../shared/validate');
 
 /**
- * What was sold over a stretch of time, and to whom.
+ * The sales ledger: one row per line of a sale.
  *
- * The report reads the sale lines as they were recorded, not today's catalogue:
- * revenue uses the price each line actually went out at, and the product name
- * is the one on the line. A price rise this week therefore does not rewrite
- * last month's takings.
+ * A sale of three products is three rows, because the questions people ask —
+ * how much of this went out, what did that customer take, what moved last
+ * Tuesday — are all questions about lines rather than about sales. One table
+ * answers all of them given a date range and a filter, which is why there are
+ * no separate per-product and per-customer summaries.
+ *
+ * Rows read as they were recorded: the price is the one that line actually
+ * went out at and the names are the ones on the line, so a price rise or a
+ * rename today does not rewrite what last month says.
  */
+
+const MAX_ROWS = 2000;
+
 class ReportsService {
   constructor({ saleReader, paymentReader, clock }) {
     this.saleReader = saleReader;
@@ -21,109 +29,101 @@ class ReportsService {
   }
 
   /**
-   * @param {{preset?:string, from?:string, to?:string}} period
+   * @param {object} query
+   * @param {string} [query.preset] today | yesterday | week | month | lastMonth | year | all
+   * @param {string} [query.from] YYYY-MM-DD
+   * @param {string} [query.to] YYYY-MM-DD
+   * @param {string} [query.productId] only lines for this product
+   * @param {string} [query.customerId] only sales to this customer
    */
-  sales(period = {}) {
-    const range = dayRange.resolve(period, this.clock);
+  sales(query = {}) {
+    const range = dayRange.resolve(query, this.clock);
+    const productId = query.productId || null;
+    const customerId = query.customerId || null;
+    const limit = query.limit ? validate.integer(query.limit, 'limit', { min: 1, max: MAX_ROWS }) : MAX_ROWS;
 
-    const sales = this.saleReader.all().filter((sale) => dayRange.contains(range, sale.at));
-    const payments = this.paymentReader.all().filter((payment) => dayRange.contains(range, payment.at));
+    const inRange = this.saleReader.all().filter((sale) => dayRange.contains(range, sale.at));
 
-    return {
-      range: { from: range.fromDay, to: range.toDay, label: range.label },
+    // Options are offered for the whole period, not for what is left after the
+    // other filter, so a filter can always be changed rather than only cleared.
+    const options = this.#options(inRange);
 
-      totals: {
-        salesCount: sales.length,
-        salesTotal: money.sum(sales.map((sale) => sale.total)),
-        paymentsCount: payments.length,
-        paymentsTotal: money.sum(payments.map((payment) => payment.amount)),
-        itemCount: quantity.normalise(
-          sales.flatMap((sale) => sale.items).reduce((total, item) => total + item.quantity, 0)
-        ),
-      },
+    const matching = customerId ? inRange.filter((sale) => sale.customerId === customerId) : inRange;
 
-      byProduct: this.#byProduct(sales),
-      byCustomer: this.#byCustomer(sales),
-      byDay: this.#byDay(sales, payments),
-      sales: sales.slice().sort(byNewest),
-    };
-  }
-
-  /** Best sellers by revenue: the usual question is "what makes the money". */
-  #byProduct(sales) {
-    const totals = new Map();
-
-    for (const sale of sales) {
-      for (const item of sale.items) {
-        const row =
-          totals.get(item.productId) ??
-          {
+    const lines = matching
+      .flatMap((sale) =>
+        sale.items
+          .filter((item) => !productId || item.productId === productId)
+          .map((item) => ({
+            saleId: sale.id,
+            at: sale.at,
+            customerId: sale.customerId,
+            customerName: sale.customerName,
             productId: item.productId,
             productName: item.productName,
             unit: item.unit,
-            quantity: 0,
-            revenue: 0,
-            saleCount: 0,
-          };
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            lineTotal: item.lineTotal,
+            note: sale.note,
+          }))
+      )
+      .sort(byNewest);
 
-        row.quantity += item.quantity;
-        row.revenue += item.lineTotal;
-        row.saleCount += 1;
-        // Keep the most recent name, which is the one the user recognises.
-        row.productName = item.productName;
-        totals.set(item.productId, row);
+    const payments = this.paymentReader
+      .all()
+      .filter((payment) => dayRange.contains(range, payment.at))
+      .filter((payment) => !customerId || payment.customerId === customerId);
+
+    return {
+      range: { from: range.fromDay, to: range.toDay, label: range.label },
+      filters: { productId, customerId },
+      options,
+
+      totals: {
+        lineCount: lines.length,
+        saleCount: new Set(lines.map((line) => line.saleId)).size,
+        salesTotal: money.sum(lines.map((line) => line.lineTotal)),
+        itemCount: quantity.normalise(lines.reduce((total, line) => total + line.quantity, 0)),
+        paymentsCount: payments.length,
+        paymentsTotal: money.sum(payments.map((payment) => payment.amount)),
+        // Payments are never tied to a product, so a product filter cannot
+        // narrow them. Say so rather than show a figure that does not match.
+        paymentsApplyToFilter: !productId,
+      },
+
+      lines: lines.slice(0, limit),
+      truncated: lines.length > limit,
+    };
+  }
+
+  /** Everything that could be filtered on in this period, with line counts. */
+  #options(sales) {
+    const products = new Map();
+    const customers = new Map();
+
+    for (const sale of sales) {
+      const customer = customers.get(sale.customerId) ?? { id: sale.customerId, name: sale.customerName, count: 0 };
+      customer.count += sale.items.length;
+      customer.name = sale.customerName;
+      customers.set(sale.customerId, customer);
+
+      for (const item of sale.items) {
+        const product = products.get(item.productId) ?? { id: item.productId, name: item.productName, count: 0 };
+        product.count += 1;
+        product.name = item.productName;
+        products.set(item.productId, product);
       }
     }
 
-    return [...totals.values()]
-      .map((row) => ({
-        ...row,
-        quantity: quantity.normalise(row.quantity),
-        averagePrice: row.quantity > 0 ? Math.round(row.revenue / row.quantity) : 0,
-      }))
-      .sort((a, b) => b.revenue - a.revenue);
-  }
-
-  #byCustomer(sales) {
-    const totals = new Map();
-
-    for (const sale of sales) {
-      const row = totals.get(sale.customerId) ?? {
-        customerId: sale.customerId,
-        customerName: sale.customerName,
-        total: 0,
-        saleCount: 0,
-      };
-
-      row.total += sale.total;
-      row.saleCount += 1;
-      totals.set(sale.customerId, row);
-    }
-
-    return [...totals.values()].sort((a, b) => b.total - a.total);
-  }
-
-  /** One row per day that had activity, oldest first, for a simple trend. */
-  #byDay(sales, payments) {
-    const days = new Map();
-    const bucket = (day) => {
-      if (!days.has(day)) days.set(day, { day, salesTotal: 0, salesCount: 0, paymentsTotal: 0 });
-      return days.get(day);
+    return {
+      products: [...products.values()].sort(byName),
+      customers: [...customers.values()].sort(byName),
     };
-
-    for (const sale of sales) {
-      const row = bucket(toLocalDay(new Date(sale.at)));
-      row.salesTotal += sale.total;
-      row.salesCount += 1;
-    }
-    for (const payment of payments) {
-      bucket(toLocalDay(new Date(payment.at))).paymentsTotal += payment.amount;
-    }
-
-    return [...days.values()].sort((a, b) => a.day.localeCompare(b.day));
   }
 }
 
 const byNewest = (a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0);
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 
 module.exports = { ReportsService };

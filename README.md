@@ -27,13 +27,13 @@ And three screens to look things up on:
 | **Stock** | Every product with price, taken in, sold, on hand and value. Search, filter to what is Low or Out, sort any column, and take a delivery in from the row itself. |
 | **Customers** | Everyone with bought, paid and balance, biggest debt first, with a Take payment button on anyone who owes. |
 | **One customer** | Balance as a headline, then sales and payments on one timeline with the balance as it stood after each — so a disputed total can be read down until you disagree. |
-| **Sales report** | What sold over any period — today, this month, last month, or a custom range — ranked by revenue with a share bar, plus who bought and a day-by-day breakdown. |
+| **Sales report** | One ledger of every sale line: date, product, customer, quantity, price, total. Narrow it by period, by product, by customer, or all three, and sort any column. |
 
 There is no separate "add stock" screen. A delivery changes a figure that lives
 on the stock table, so it is entered there: one tap on the row's **+ Add**, a
 quantity, done, without losing your place.
 
-The three lookup screens are built on one dense, sortable table
+The lookup screens are built on one dense, sortable table
 ([src/ui/widgets/table.js](src/ui/widgets/table.js)): a sticky header, numbers
 right-aligned on tabular figures so digits line up, light banding to keep a long
 list scannable, and a coloured status dot so a shortage registers before

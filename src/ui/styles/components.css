@@ -408,10 +408,15 @@
 /* ---------- data table ---------- */
 
 /*
- * Figures are what the stock, customer and report screens are for, so they use
- * a real table: columns that read down, numbers right-aligned on tabular
- * figures so the digits line up, and rows tight enough to compare a dozen at a
- * glance. The header stays put while hundreds of rows scroll under it.
+ * Figures are what the stock, customer and sales screens are for, so they use a
+ * real table: columns that read down, numbers right-aligned on tabular figures
+ * so the digits line up, and a header that stays put while hundreds of rows
+ * scroll under it.
+ *
+ * Rows are sized to be comfortably scannable rather than as tight as possible —
+ * a row you can land on is worth more than one more row on screen. Separation
+ * is a single hairline, with the hover tint doing the work of picking a row
+ * out; banding as well would be two devices for one job.
  */
 
 .table-wrap {
@@ -429,20 +434,20 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 14.5px;
 }
 
 .table th {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 7px var(--space-3);
+  padding: 11px var(--space-4) 10px;
   background: var(--bg);
   border-bottom: 1px solid var(--border-strong);
-  color: var(--text-soft);
+  color: var(--text-faint);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   text-align: left;
   white-space: nowrap;
@@ -455,7 +460,6 @@
 
 .table__th--sortable:hover {
   color: var(--text);
-  background: var(--surface-hover);
 }
 
 .table__th--active {
@@ -463,31 +467,32 @@
 }
 
 .table__caret {
-  margin-left: 4px;
+  margin-left: 5px;
   font-size: 9px;
+  vertical-align: 1px;
 }
 
 .table td {
-  padding: 6px var(--space-3);
+  padding: 10px var(--space-4);
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   white-space: nowrap;
 }
 
-/*
- * Exactly one column takes the slack — the name. With table-layout: auto that
- * is width:100% here and shrink-to-fit everywhere else; the nowrap on every
- * cell does the shrinking. A name too long for the window scrolls the wrapper
- * sideways rather than squeezing the figures.
- */
-.table th.table__grow,
-.table td.table__grow {
-  width: 100%;
+/* The outer columns line up with the page rather than sitting inside a box. */
+.table th:first-child,
+.table td:first-child {
+  padding-left: var(--space-3);
 }
 
-/* A very light banding, which is what makes a long table scannable. */
-.table tbody tr:nth-child(even) {
-  background: var(--surface-sunken);
+.table th:last-child,
+.table td:last-child {
+  padding-right: var(--space-3);
+}
+
+/* A list should end on content, not on a rule. */
+.table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .table tbody tr:hover {
@@ -506,27 +511,26 @@
 
 .table__strong {
   font-weight: 600;
-  font-size: 15px;
 }
 
 .table__empty td {
-  padding: var(--space-5) var(--space-3);
+  padding: var(--space-6) var(--space-3);
   text-align: center;
 }
 
-.table__empty,
 .table__empty:hover {
-  background: transparent !important;
+  background: transparent;
 }
 
 .table__sub {
   color: var(--text-faint);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* A compact trailing action, e.g. "+ Add" on every stock row. */
+/* Sized so it does not set the row height; the text does. */
 .table__action {
-  min-height: 30px;
+  min-height: 28px;
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-sm);
@@ -569,41 +573,13 @@
   background: var(--border-strong);
 }
 
-/* ---------- share bar ---------- */
+/* ---------- toolbar ---------- */
 
 /*
- * A proportion is compared, not read: the bar does the comparing and the
- * number is there for when the exact figure matters.
+ * The row of controls that narrows a table: a search box or a couple of
+ * choosers, the filter chips, and the button that adds a new record. It wraps
+ * rather than scrolling, so a narrow window stacks it instead of hiding half.
  */
-.share {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
-
-.share__track {
-  width: clamp(40px, 7vw, 110px);
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-hover);
-  overflow: hidden;
-}
-
-.share__fill {
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-}
-
-.share__value {
-  min-width: 34px;
-  color: var(--text-soft);
-  font-size: 12px;
-}
-
-/* ---------- filter bar ---------- */
-
 .toolbar {
   display: flex;
   align-items: center;
@@ -622,20 +598,23 @@
   font-size: 15px;
 }
 
-.chip--active {
-  background: var(--accent);
-  color: var(--accent-text);
+.input--search {
+  min-height: 42px;
+  font-size: 15px;
 }
 
-.chip--active:hover {
-  background: var(--accent-hover);
-  color: var(--accent-text);
+.toolbar__field {
+  flex: 1 1 190px;
+  min-width: 150px;
+  max-width: 280px;
 }
 
-.chip__count {
-  margin-left: 6px;
-  opacity: 0.75;
-  font-variant-numeric: tabular-nums;
+/* A native select, so hundreds of products stay type-ahead searchable. */
+.input--select {
+  min-height: 42px;
+  padding: 0 var(--space-3);
+  font-size: 15px;
+  cursor: pointer;
 }
 
 /* ---------- badges ---------- */
@@ -744,6 +723,19 @@
 .chip:hover {
   background: var(--surface-hover);
   color: var(--text);
+}
+
+/* After the base rule on purpose: same specificity, so order decides. */
+.chip--active,
+.chip--active:hover {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.chip__count {
+  margin-left: 6px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- stepper ---------- */
@@ -1052,13 +1044,6 @@
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
-}
-
-.spread {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
 }
 
 .grow {
