@@ -305,7 +305,24 @@ async function main() {
   check('the customer table shows the remaining balance', text.includes('$14.50'), text.slice(0, 300));
   check('the customer table has sortable column headings', (await page.evaluate(
     `document.querySelectorAll('.table__th--sortable').length`
-  )) >= 4);
+  )) >= 3);
+
+  const customerHeadings = await page.evaluate(
+    `JSON.stringify([...document.querySelectorAll('.table th')].map((th) => th.textContent.trim()))`
+  );
+  check(
+    'the customer table says when each person was last in, not what they have bought or paid',
+    customerHeadings.includes('Last visited') &&
+      !customerHeadings.includes('Bought') &&
+      !customerHeadings.includes('"Paid"'),
+    customerHeadings
+  );
+
+  const visits = await page.evaluate(
+    `JSON.stringify([...document.querySelectorAll('tbody tr')].map((tr) => tr.textContent))`
+  );
+  check('the customer seen today reads "Today"', /Alice Mwangi[^"]*Today/.test(visits), visits);
+  check('a customer who has never been in reads "not yet"', /Bob Otieno[^"]*not yet/.test(visits), visits);
 
   await page.click('tbody tr', 'Alice Mwangi');
   text = await page.text();

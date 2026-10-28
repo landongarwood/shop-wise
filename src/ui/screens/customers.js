@@ -9,8 +9,10 @@ import { emptyState, stat } from '../widgets/states.js';
  * Who owes what.
  *
  * Sorted by debt, largest first, because the reason to open this screen is
- * almost always to see who has not paid. Every column sorts, so the same table
- * answers "who buys the most" without a second screen.
+ * almost always to see who has not paid. Beside it is when each person was last
+ * in, so a debt that is still being paid down reads differently from one nobody
+ * has seen for a month. Running totals belong to one customer at a time and
+ * live on their own screen. Every column sorts.
  */
 export async function customers(ctx) {
   const { api, format, go, reload } = ctx;
@@ -142,18 +144,17 @@ export async function customers(ctx) {
         cell: (person) => person.name,
       },
       {
-        key: 'charged',
-        label: 'Bought',
-        numeric: true,
-        sort: by.number((person) => person.charged),
-        cell: (person) => format.money(person.charged),
-      },
-      {
-        key: 'paid',
-        label: 'Paid',
-        numeric: true,
-        sort: by.number((person) => person.paid),
-        cell: (person) => format.money(person.paid),
+        key: 'lastVisit',
+        label: 'Last visited',
+        title: 'Sort by last visited',
+        // Buying and paying both count as a visit. Someone who has not been in
+        // for weeks is the one worth chasing, which is why this sits here
+        // instead of the running totals — those are on their own screen.
+        sort: by.text((person) => person.lastVisit ?? ''),
+        cell: (person) =>
+          person.lastVisit
+            ? format.relativeDay(person.lastVisit)
+            : span({ class: 'soft', text: 'not yet' }),
       },
       {
         key: 'balance',

@@ -63,16 +63,28 @@ class LedgerService {
       .slice(0, limit);
   }
 
-  /** @returns {Map<string, {charged:number, paid:number, balance:number, status:string}>} */
+  /**
+   * @returns {Map<string, {charged:number, paid:number, balance:number, status:string, lastVisit:string|null}>}
+   */
   positions() {
     const positions = new Map();
     const bucket = (customerId) => {
-      if (!positions.has(customerId)) positions.set(customerId, { charged: 0, paid: 0, balance: 0 });
+      if (!positions.has(customerId)) positions.set(customerId, { ...NO_POSITION });
       return positions.get(customerId);
     };
 
-    for (const sale of this.saleReader.all()) bucket(sale.customerId).charged += sale.total;
-    for (const payment of this.payments.all()) bucket(payment.customerId).paid += payment.amount;
+    // Buying and paying both count as coming in: either way the shopkeeper saw
+    // them that day, which is what "last visited" is asked in order to know.
+    for (const sale of this.saleReader.all()) {
+      const position = bucket(sale.customerId);
+      position.charged += sale.total;
+      position.lastVisit = later(position.lastVisit, sale.at);
+    }
+    for (const payment of this.payments.all()) {
+      const position = bucket(payment.customerId);
+      position.paid += payment.amount;
+      position.lastVisit = later(position.lastVisit, payment.at);
+    }
 
     for (const position of positions.values()) {
       position.balance = position.charged - position.paid;
@@ -82,7 +94,7 @@ class LedgerService {
   }
 
   positionFor(customerId) {
-    return this.positions().get(customerId) ?? { charged: 0, paid: 0, balance: 0, status: STATUS.settled };
+    return this.positions().get(customerId) ?? { ...NO_POSITION, status: STATUS.settled };
   }
 
   /** Every visible customer with their position, ready for the customers screen. */
@@ -91,7 +103,7 @@ class LedgerService {
 
     return this.customers.list().map((customer) => ({
       ...customer,
-      ...(positions.get(customer.id) ?? { charged: 0, paid: 0, balance: 0, status: STATUS.settled }),
+      ...(positions.get(customer.id) ?? { ...NO_POSITION, status: STATUS.settled }),
     }));
   }
 
@@ -156,6 +168,11 @@ class LedgerService {
   }
 }
 
+/** A customer nothing has happened to yet. Spread, never shared. */
+const NO_POSITION = Object.freeze({ charged: 0, paid: 0, balance: 0, status: STATUS.settled, lastVisit: null });
+
+// ISO instants sort as text, which is why dates are stored this way.
+const later = (a, b) => (a === null || b > a ? b : a);
 const statusOf = (balance) => (balance > 0 ? STATUS.owes : balance < 0 ? STATUS.credit : STATUS.settled);
 const byNewest = (a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0);
 const byOldest = (a, b) => (a.at > b.at ? 1 : a.at < b.at ? -1 : 0);

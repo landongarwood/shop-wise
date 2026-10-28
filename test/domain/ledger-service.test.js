@@ -18,6 +18,7 @@ describe('customer balances', () => {
       paid: 0,
       balance: 0,
       status: 'settled',
+      lastVisit: null,
     });
   });
 
@@ -175,5 +176,72 @@ describe('shop-wide totals', () => {
     assert.equal(listed.length, 2);
     assert.equal(listed.find((customer) => customer.id === alice.id).balance, 1200);
     assert.equal(listed.find((customer) => customer.id === alice.id).status, 'owes');
+  });
+});
+
+/**
+ * When each customer was last in. The customers screen leads with this, so it
+ * has to mean the last time the shopkeeper saw them — not only the last sale.
+ */
+describe('last visited', () => {
+  test('someone who has never been in has no last visit', async () => {
+    const { services, alice } = await createShop();
+
+    assert.equal(services.ledger.positionFor(alice.id).lastVisit, null);
+    assert.equal(
+      services.ledger.customerPositions().find((customer) => customer.id === alice.id).lastVisit,
+      null
+    );
+  });
+
+  test('buying counts as a visit', async () => {
+    const { services, coffee, alice } = await createShop();
+
+    await services.sales.record({
+      customerId: alice.id,
+      items: [{ productId: coffee.id, quantity: 1 }],
+      at: '2026-03-02',
+    });
+
+    assert.match(services.ledger.positionFor(alice.id).lastVisit, /^2026-03-02/);
+  });
+
+  test('paying counts as a visit too', async () => {
+    const { services, alice } = await createShop();
+
+    await services.ledger.recordPayment({ customerId: alice.id, amount: '5.00', at: '2026-03-04' });
+
+    assert.match(services.ledger.positionFor(alice.id).lastVisit, /^2026-03-04/);
+  });
+
+  test('the latest of the two is the one reported', async () => {
+    const { services, coffee, alice } = await createShop();
+
+    await services.sales.record({
+      customerId: alice.id,
+      items: [{ productId: coffee.id, quantity: 1 }],
+      at: '2026-03-09',
+    });
+    await services.ledger.recordPayment({ customerId: alice.id, amount: '5.00', at: '2026-03-05' });
+
+    // The payment was recorded second but happened first, so the sale stands.
+    assert.match(services.ledger.positionFor(alice.id).lastVisit, /^2026-03-09/);
+
+    await services.ledger.recordPayment({ customerId: alice.id, amount: '5.00', at: '2026-03-11' });
+    assert.match(services.ledger.positionFor(alice.id).lastVisit, /^2026-03-11/);
+  });
+
+  test('one customer visiting is not another visiting', async () => {
+    const { services, coffee, alice, bob } = await createShop();
+
+    await services.sales.record({
+      customerId: alice.id,
+      items: [{ productId: coffee.id, quantity: 1 }],
+      at: '2026-03-07',
+    });
+
+    const listed = services.ledger.customerPositions();
+    assert.match(listed.find((customer) => customer.id === alice.id).lastVisit, /^2026-03-07/);
+    assert.equal(listed.find((customer) => customer.id === bob.id).lastVisit, null);
   });
 });
