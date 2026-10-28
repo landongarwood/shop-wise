@@ -1,0 +1,23 @@
+{
+  "name": "shopwise",
+  "productName": "ShopWise",
+  "version": "0.1.0",
+  "description": "Lightweight Windows accounting app for small shops and cafes",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "src/main.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "dev": "node src/main.js --dev",
+    "serve": "node src/main.js --no-window",
+    "build": "node build/build.js",
+    "msi": "node build/build.js --msi",
+    "tools:wix": "node build/fetch-wix.js",
+    "test": "node --test test/**/*.test.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

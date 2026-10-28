@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ShopWise installer.
+
+  Product/@Id="*" regenerates the ProductCode on every build while UpgradeCode
+  stays fixed, which is what lets MajorUpgrade replace an older install in place
+  instead of leaving two entries in Apps & features.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+      Id="*"
+      Name="$(var.ProductName)"
+      Version="$(var.ProductVersion)"
+      Manufacturer="$(var.ProductName)"
+      Language="1033"
+      UpgradeCode="2212490F-17EE-4508-A56D-5861FFB0E984">
+
+    <Package
+        InstallerVersion="500"
+        Compressed="yes"
+        InstallScope="perMachine"
+        Description="$(var.ProductName) $(var.ProductVersion)"
+        Comments="Lightweight accounting for small shops and cafes" />
+
+    <MajorUpgrade
+        AllowSameVersionUpgrades="yes"
+        DowngradeErrorMessage="A newer version of $(var.ProductName) is already installed. Remove it first if you want to go back to this version." />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- 64-bit Windows 8.1 or newer, so the bundled Node runtime and the Edge
+         WebView engine are both supported. -->
+    <Condition Message="$(var.ProductName) requires 64-bit Windows 8.1 or later.">
+      <![CDATA[Installed OR (VersionNT >= 603 AND VersionNT64)]]>
+    </Condition>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="$(var.ProductName)" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder" />
+      <Directory Id="DesktopFolder" />
+    </Directory>
+
+    <!--
+      Shortcut targets are written as paths rather than component references so
+      they do not depend on the component ids heat.exe generates for the payload.
+
+      Each shortcut lives in its own component keyed on an HKCU value: that is
+      the pattern Windows Installer requires for non-advertised shortcuts placed
+      in per-user folders, even inside a per-machine install.
+    -->
+    <DirectoryRef Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut" Guid="B4BCDF78-DCCD-47DB-90F5-DABC3BDE963C">
+        <Shortcut
+            Id="StartMenuShortcut"
+            Name="$(var.ProductName)"
+            Description="Open $(var.ProductName)"
+            Target="[INSTALLFOLDER]$(var.ProductName).exe"
+            Arguments="&quot;[INSTALLFOLDER]src\main.js&quot;"
+            WorkingDirectory="INSTALLFOLDER" />
+
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\$(var.ProductName)\Shortcuts"
+            Name="StartMenu"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="7C1E9C6A-4F2B-4A0E-9E55-3B1C7D2A64E1">
+        <Shortcut
+            Id="DesktopShortcut"
+            Name="$(var.ProductName)"
+            Description="Open $(var.ProductName)"
+            Target="[INSTALLFOLDER]$(var.ProductName).exe"
+            Arguments="&quot;[INSTALLFOLDER]src\main.js&quot;"
+            WorkingDirectory="INSTALLFOLDER" />
+
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\$(var.ProductName)\Shortcuts"
+            Name="Desktop"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- Per-machine record of where the app landed, for upgrades and support. -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="InstallRegistry" Guid="9EA5EFAE-4AED-4D56-9379-92A360975ECE">
+        <RegistryValue
+            Root="HKLM"
+            Key="Software\$(var.ProductName)"
+            Name="InstallFolder"
+            Type="string"
+            Value="[INSTALLFOLDER]"
+            KeyPath="yes" />
+        <RegistryValue
+            Root="HKLM"
+            Key="Software\$(var.ProductName)"
+            Name="Version"
+            Type="string"
+            Value="$(var.ProductVersion)" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="Main" Title="$(var.ProductName)" Level="1" Display="expand" AllowAdvertise="no">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="DesktopShortcut" />
+      <ComponentRef Id="InstallRegistry" />
+    </Feature>
+
+    <!-- Uninstalling leaves %LOCALAPPDATA%\ShopWise alone on purpose: the shop's
+         books must survive an uninstall or a failed upgrade. -->
+
+    <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="build\wix\License.rtf" />
+
+    <UIRef Id="WixUI_InstallDir" />
+  </Product>
+</Wix>

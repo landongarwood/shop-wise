@@ -1,0 +1,15 @@
+# build output
+/dist/
+/stage/
+
+# downloaded build tooling (fetched by `npm run tools:wix`)
+/tools/
+
+# local runtime data (only created when running from the repo)
+/.data/
+
+# editor / os
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
