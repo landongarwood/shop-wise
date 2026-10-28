@@ -56,11 +56,6 @@ export async function stock(ctx) {
 
   const lowCount = products.filter((product) => product.low && product.onHand > 0).length;
   const outCount = products.filter((product) => product.onHand <= 0).length;
-  const stockValue = products.reduce(
-    (sum, product) => sum + Math.round(product.price * Math.max(0, product.onHand)),
-    0
-  );
-
   const summary = div({ class: 'summary' }, [
     stat({ label: 'Products', value: String(products.length) }),
     stat({
@@ -70,7 +65,6 @@ export async function stock(ctx) {
       tone: lowCount ? 'warn' : null,
     }),
     stat({ label: 'Out of stock', value: String(outCount), tone: outCount ? 'debt' : null }),
-    stat({ label: 'Stock value', value: format.money(stockValue), hint: 'at your usual prices' }),
   ]);
 
   /* ---------- filtering ---------- */

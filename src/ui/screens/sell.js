@@ -2,7 +2,7 @@ import { div, button, append, clear } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { toastOk, toastWarn } from '../core/toast.js';
 import { openCustomerPicker, productList } from '../widgets/pickers.js';
-import { openNewProductSheet, openSaleLineSheet } from '../widgets/forms.js';
+import { openAddStockSheet, openNewProductSheet, openSaleLineSheet } from '../widgets/forms.js';
 import { emptyState } from '../widgets/states.js';
 import { createSteps } from '../widgets/steps.js';
 
@@ -27,11 +27,16 @@ export async function sell(ctx) {
   let customer = params.customer ?? null;
   const lines = [];
 
-  const steps = createSteps([
-    { key: 'who', title: 'Who is buying?', hint: 'Pick who is buying' },
-    { key: 'what', title: 'What are they taking?', hint: 'Tap each product' },
-    { key: 'save', title: 'Check and save', hint: 'Nothing to save yet' },
-  ]);
+  const steps = createSteps(
+    [
+      { key: 'who', title: 'Who is buying?', hint: 'Pick who is buying' },
+      { key: 'what', title: 'What are they taking?', hint: 'Tap each product' },
+      { key: 'save', title: 'Check and save', hint: 'Nothing to save yet' },
+    ],
+    // The running sale stays in view beside the product list rather than
+    // sitting below it, where a long catalogue would push it off the screen.
+    { aside: ['save'] }
+  );
 
   const customerSlot = steps.body('who');
   const cartSlot = steps.body('save');
@@ -241,10 +246,28 @@ export async function sell(ctx) {
     };
   }
 
+  /*
+   * Something with no stock recorded cannot be sold: the figures would say the
+   * shop holds less than nothing, and the mistake only surfaces as a warning
+   * after the sale is already saved.
+   *
+   * Tapping it is still the way forward, though — it offers to take the stock
+   * in, which is both the fix and the record of what arrived.
+   */
+  const offerToRestock = async (product) => {
+    const entry = await openAddStockSheet({ api, product, format, onHand: product.onHand });
+    if (!entry) return;
+
+    toastOk(`${format.quantity(entry.quantity)} of ${product.name} taken in`);
+    await ctx.reload();
+  };
+
   picker = productList({
     products,
     format,
     onPick: addLine,
+    unavailable: (product) => product.onHand <= 0,
+    onUnavailable: offerToRestock,
     onNew: async () => {
       if (await openNewProductSheet({ api })) ctx.reload();
     },

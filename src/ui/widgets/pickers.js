@@ -36,9 +36,21 @@ const matches = (haystack, term) => !term || haystack.toLowerCase().includes(ter
  * entered from the keyboard without the hand leaving it. The rows scroll within
  * their own area rather than pushing the running total off the screen.
  *
+ * A row can be marked unavailable — selling something with no stock recorded
+ * is a mistake rather than a choice — in which case tapping it calls
+ * `onUnavailable` instead, which is where the way out is offered.
+ *
  * @returns {{node: HTMLElement, focusSearch: Function}}
  */
-export function productList({ products, format, onPick, onNew = null, newLabel = 'New product' }) {
+export function productList({
+  products,
+  format,
+  onPick,
+  onNew = null,
+  newLabel = 'New product',
+  unavailable = null,
+  onUnavailable = null,
+}) {
   const rows = div({ class: 'rows picker__rows' });
   const count = div({ class: 'picker__count' });
 
@@ -57,7 +69,13 @@ export function productList({ products, format, onPick, onNew = null, newLabel =
       return;
     }
 
-    append(rows, visible.map((product) => productRow(product, format, onPick)));
+    append(
+      rows,
+      visible.map((product) => {
+        const blocked = Boolean(unavailable?.(product));
+        return productRow(product, format, blocked ? onUnavailable ?? onPick : onPick, blocked);
+      })
+    );
   };
 
   const search = searchBox({
@@ -70,7 +88,10 @@ export function productList({ products, format, onPick, onNew = null, newLabel =
   search.control.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' || !visible.length) return;
     event.preventDefault();
-    onPick(visible[0]);
+
+    const top = visible[0];
+    if (unavailable?.(top)) onUnavailable?.(top);
+    else onPick(top);
   });
 
   draw();
@@ -90,11 +111,11 @@ export function productList({ products, format, onPick, onNew = null, newLabel =
   };
 }
 
-function productRow(product, format, onPick) {
+function productRow(product, format, onPick, blocked = false) {
   const out = product.onHand <= 0;
   const low = !out && product.low;
 
-  return button({ class: 'row', onclick: () => onPick(product) }, [
+  return button({ class: `row${blocked ? ' row--blocked' : ''}`, onclick: () => onPick(product) }, [
     div({ class: 'row__main' }, [
       div({ class: 'row__title', text: product.name }),
       div({

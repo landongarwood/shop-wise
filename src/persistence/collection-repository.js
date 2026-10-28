@@ -48,6 +48,19 @@ class CollectionRepository {
     });
   }
 
+  /**
+   * Stores several records in one write, so a delivery of twelve products is
+   * one entry in the file rather than twelve, and cannot be half-saved.
+   */
+  async addMany(records) {
+    if (!records.length) return [];
+
+    return this.store.mutate((draft) => {
+      draft[this.collection].push(...records);
+      return records;
+    });
+  }
+
   async patch(id, changes) {
     return this.store.mutate((draft) => {
       const rows = draft[this.collection];

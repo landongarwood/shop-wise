@@ -17,6 +17,12 @@ module.exports = function registerStock(router, { inventory }) {
   }));
 
   // Everything that moved this product: deliveries in and sales out together.
+  // A whole delivery at once: all of it is written, or none of it is.
+  router.post('/stock/batch', async ({ body }) => ({
+    status: 201,
+    payload: await inventory.addStockBatch(body),
+  }));
+
   router.get('/stock/products/:productId/movements', ({ params, query }) =>
     inventory.movementsFor(params.productId, {
       limit: query.has('limit') ? validate.integer(query.get('limit'), 'limit', { min: 1, max: 200 }) : 25,

@@ -29,6 +29,12 @@ export async function home(ctx) {
       screen: 'sell',
     },
     {
+      label: 'Add stock',
+      hint: 'A delivery came in',
+      iconName: 'stock',
+      screen: 'stock-in',
+    },
+    {
       label: 'Take payment',
       hint: 'A customer paid you',
       iconName: 'money',
@@ -100,7 +106,7 @@ function lowStockSection(overview, { go, format }) {
   if (!overview.lowStock.length) return null;
 
   const rows = div(
-    { class: 'rows' },
+    { class: 'rows list-scroll' },
     overview.lowStock.map((product) =>
       button({ class: 'row', onclick: () => go('stock') }, [
         div({ class: 'row__main' }, div({ class: 'row__title', text: product.name })),
@@ -114,9 +120,18 @@ function lowStockSection(overview, { go, format }) {
     )
   );
 
+  const shown = overview.lowStock.length;
+  const total = overview.lowStockCount ?? shown;
+
   const section = div({ class: 'section' });
   append(section, [
-    div({ class: 'section__head' }, div({ class: 'section__title', text: 'Running low' })),
+    div({ class: 'section__head' }, [
+      div({ class: 'section__title', text: 'Running low' }),
+      div({
+        class: 'faint',
+        text: total > shown ? `showing ${shown} of ${total}` : `${total} ${total === 1 ? 'product' : 'products'}`,
+      }),
+    ]),
     rows,
   ]);
   return section;

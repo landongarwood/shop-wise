@@ -21,19 +21,23 @@ class OverviewService {
     this.clock = clock;
   }
 
-  summary() {
+  summary({ lowStockLimit = 50 } = {}) {
     const today = this.clock.today();
     const month = today.slice(0, 7);
 
     const sales = this.saleReader.all();
     const payments = this.paymentReader.all();
+    const lowStock = this.inventory.lowStock();
 
     return {
       settings: this.settings.get(),
       today: this.#period(sales, payments, (day) => day === today),
       month: this.#period(sales, payments, (day) => day.startsWith(month)),
       ledger: this.ledger.totals(),
-      lowStock: this.inventory.lowStock().map(({ id, name, unit, onHand }) => ({ id, name, unit, onHand })),
+      lowStock: lowStock
+        .slice(0, lowStockLimit)
+        .map(({ id, name, unit, onHand }) => ({ id, name, unit, onHand })),
+      lowStockCount: lowStock.length,
       counts: {
         products: this.catalog.list().length,
         customers: this.customers.list().length,

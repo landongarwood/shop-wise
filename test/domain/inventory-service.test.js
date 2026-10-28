@@ -189,6 +189,120 @@ describe('stock', () => {
   });
 });
 
+  describe('taking in a whole delivery', () => {
+    test('records every line in one go', async () => {
+      const { services, coffee, cups } = await createShop();
+
+      const entries = await services.inventory.addStockBatch({
+        lines: [
+          { productId: coffee.id, quantity: 5 },
+          { productId: cups.id, quantity: 200 },
+        ],
+        note: 'Friday delivery',
+      });
+
+      assert.equal(entries.length, 2);
+      assert.equal(services.inventory.onHand(coffee.id), 25);
+      assert.equal(services.inventory.onHand(cups.id), 700);
+      assert.ok(entries.every((entry) => entry.note === 'Friday delivery'));
+      assert.ok(entries.every((entry) => entry.at === entries[0].at), 'one delivery, one moment');
+    });
+
+    test('is one write, so it cannot be half-saved', async () => {
+      const shop = await createShop();
+      const before = shop.store.writes;
+
+      await shop.services.inventory.addStockBatch({
+        lines: [
+          { productId: shop.coffee.id, quantity: 1 },
+          { productId: shop.cups.id, quantity: 2 },
+        ],
+      });
+
+      assert.equal(shop.store.writes - before, 1, 'twelve products would still be one entry in the file');
+    });
+
+    test('a bad line refuses the whole delivery, changing nothing', async () => {
+      const { services, coffee, cups } = await createShop();
+
+      await assert.rejects(
+        () =>
+          services.inventory.addStockBatch({
+            lines: [
+              { productId: coffee.id, quantity: 5 },
+              { productId: 'ghost', quantity: 1 },
+              { productId: cups.id, quantity: 9 },
+            ],
+          }),
+        /product no longer exists/
+      );
+
+      assert.equal(services.inventory.onHand(coffee.id), 20, 'the good line was not written either');
+      assert.equal(services.inventory.onHand(cups.id), 500);
+    });
+
+    test('refuses a quantity that is not a quantity, before writing', async () => {
+      const { services, coffee, cups } = await createShop();
+
+      await assert.rejects(
+        () =>
+          services.inventory.addStockBatch({
+            lines: [
+              { productId: coffee.id, quantity: 5 },
+              { productId: cups.id, quantity: 0 },
+            ],
+          }),
+        /more than zero/
+      );
+
+      assert.equal(services.inventory.onHand(coffee.id), 20);
+    });
+
+    test('refuses the same product twice rather than guessing', async () => {
+      const { services, coffee } = await createShop();
+
+      await assert.rejects(
+        () =>
+          services.inventory.addStockBatch({
+            lines: [
+              { productId: coffee.id, quantity: 5 },
+              { productId: coffee.id, quantity: 3 },
+            ],
+          }),
+        /on this delivery twice/
+      );
+
+      assert.equal(services.inventory.onHand(coffee.id), 20);
+    });
+
+    test('refuses a hidden product, and an empty delivery', async () => {
+      const { services, coffee, cups } = await createShop();
+
+      await services.catalog.archive(cups.id);
+      await assert.rejects(
+        () => services.inventory.addStockBatch({ lines: [{ productId: cups.id, quantity: 1 }] }),
+        /hidden/
+      );
+
+      await assert.rejects(() => services.inventory.addStockBatch({ lines: [] }), /at least 1 product/);
+      await assert.rejects(() => services.inventory.addStockBatch({}), /at least 1 product/);
+
+      assert.equal(services.inventory.onHand(coffee.id), 20);
+    });
+
+    test('a delivery dated to a given day lands on that day', async () => {
+      const { services, coffee } = await createShop();
+
+      const [entry] = await services.inventory.addStockBatch({
+        lines: [{ productId: coffee.id, quantity: 1 }],
+        at: '2026-03-02',
+      });
+
+      assert.equal(entry.at.slice(0, 10), '2026-03-02');
+      assert.equal(services.inventory.movementsFor(coffee.id).total, 2);
+    });
+  });
+
 describe('the product list', () => {
   test('refuses two products with the same name', async () => {
     const { services } = await createShop();

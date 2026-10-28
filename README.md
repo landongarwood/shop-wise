@@ -17,8 +17,9 @@ Two actions, each one tap from the home screen:
 
 | | |
 | --- | --- |
-| **Sell** | Pick a customer, then find products in a searchable list. Each pick asks how many and at what price — pre-filled with the usual price, editable because it varies. |
-| **Take payment** | Pick a customer, enter what they paid. "Pay all" is one tap. Any date, any amount. |
+| **Sell** | Three numbered steps: who is buying, what they are taking, check and save. Products come from a searchable list; each pick asks how many and at what price — pre-filled with the usual price, editable because it varies. The running sale sits in a sticky column beside the list. |
+| **Add stock** | A whole delivery at once: tap each product that arrived, set the amounts together, save once. The server takes it in a single write, so it is recorded or refused, never half-entered. |
+| **Take payment** | Who paid, how much, when — same three-step shape. "Pay all" is one tap. Any date, any amount. |
 
 And three screens to look things up on:
 
@@ -60,6 +61,11 @@ string form and never summed as floats — a shop's books can't afford
 Two consequences worth knowing: a payment is never matched to a particular sale,
 because the shop doesn't work that way; and paying more than the balance is
 normal, not an error — it becomes credit.
+
+A sale cannot take out more than the stock records hold: the sell screen marks
+an empty product as unavailable and offers to take stock in instead, which is
+both the fix and the record of what arrived. The server still only warns, so a
+correction or an import is never blocked by it.
 
 ## Running it
 

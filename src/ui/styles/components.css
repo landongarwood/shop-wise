@@ -461,6 +461,16 @@
 
 /* ---------- list rows ---------- */
 
+/*
+ * A list that can grow without limit scrolls in place rather than pushing
+ * everything below it off the screen.
+ */
+.list-scroll {
+  max-height: clamp(180px, 34vh, 360px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .rows {
   display: flex;
   flex-direction: column;
@@ -485,6 +495,12 @@
 
 .row:hover {
   background: var(--surface-sunken);
+}
+
+/* Still tappable — tapping is how the way out is offered — but plainly not a
+   normal choice. */
+.row--blocked .row__title {
+  color: var(--text-faint);
 }
 
 .row--static {
@@ -906,6 +922,46 @@
   gap: clamp(12px, 1.4vw, 18px);
 }
 
+/*
+ * On a wide window the running total sits beside the work rather than below
+ * it: with a few hundred products in the list, a total at the bottom of the
+ * page is a total nobody can see while they are picking.
+ */
+.steps--split {
+  display: grid;
+  gap: clamp(12px, 1.4vw, 18px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+  align-items: start;
+}
+
+.steps__main {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 1.4vw, 18px);
+  min-width: 0;
+}
+
+.steps__aside {
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - var(--appbar-height) - 2 * var(--space-5));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Below this the two columns would both be too narrow to be worth it. */
+@media (max-width: 1000px) {
+  .steps--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .steps__aside {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
 .step {
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
@@ -1006,6 +1062,69 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+/* ---------- a delivery being entered ---------- */
+
+/*
+ * One row per product arriving, with the amount editable in place. A sheet per
+ * product is what made taking in a delivery of twelve things tedious.
+ */
+.delivery {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.delivery:last-child {
+  border-bottom: 0;
+}
+
+.delivery__count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 0 0 auto;
+}
+
+.delivery__step {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.delivery__step:hover {
+  background: var(--surface-sunken);
+  border-color: var(--accent);
+}
+
+.delivery__qty {
+  width: 64px;
+  height: 36px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 650;
+  text-align: center;
+}
+
+.delivery__qty:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* ---------- running sale ---------- */

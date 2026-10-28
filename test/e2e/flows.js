@@ -408,9 +408,12 @@ async function main() {
     (() => {
       const dates = [...document.querySelectorAll('input[type="date"]')];
       if (dates.length !== 2) return { error: 'expected two date fields, found ' + dates.length };
-      // A window that ended yesterday cannot contain today's sale.
+      // A window that ended years ago cannot contain today's sale.
+      //
+      // Both values are set, then one change is fired: the first change
+      // re-renders the screen, which would leave the second field detached and
+      // only half the range applied.
       dates[0].value = '2020-01-01';
-      dates[0].dispatchEvent(new Event('change', { bubbles: true }));
       dates[1].value = '2020-01-31';
       dates[1].dispatchEvent(new Event('change', { bubbles: true }));
       return { ok: true };
@@ -418,9 +421,14 @@ async function main() {
   `);
   check('both date fields are present', dateFilter.ok === true, JSON.stringify(dateFilter));
 
-  await wait(900);
-  await page.installHelpers();
-  text = await page.text();
+  // Poll rather than guess at a duration: this triggers a navigation and a
+  // fetch, and a fixed wait makes the check flaky on a busy machine.
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    await wait(100);
+    await page.installHelpers();
+    text = await page.text();
+    if (!text.includes('$34.50')) break;
+  }
   check('picking a date re-queries on its own', !text.includes('$34.50'), text.slice(0, 240));
   check('and says why the table is empty', text.toLowerCase().includes('nothing'), text.slice(0, 240));
 

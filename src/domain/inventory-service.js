@@ -51,6 +51,52 @@ class InventoryService {
     });
   }
 
+  /**
+   * Takes in a whole delivery at once.
+   *
+   * Several products arriving together is the normal case, not the exception.
+   * Every line is checked before any of it is written, so a delivery is either
+   * recorded or refused — never half-entered, which would leave stock figures
+   * that nobody can reconcile against the paperwork.
+   *
+   * @param {{lines: Array<{productId: string, quantity: number|string}>, note?: string, at?: string}} input
+   */
+  async addStockBatch(input) {
+    const lines = validate.array(input?.lines, 'product', { min: 1 });
+    const at = validate.instant(input?.at) ?? this.clock.now().toISOString();
+    const note = validate.text(input?.note, 'note', { required: false, max: 200 });
+    const createdAt = this.clock.now().toISOString();
+
+    const entries = lines.map((line) => {
+      const productId = validate.id(line?.productId, 'product');
+      const product = this.catalog.get(productId);
+
+      if (product.archived) throw badRequest(`"${product.name}" is hidden. Restore it before adding stock.`);
+
+      return {
+        id: this.ids.next(),
+        productId,
+        productName: product.name, // snapshot, as elsewhere
+        quantity: quantity.parse(line?.quantity, 'quantity'),
+        at,
+        note,
+        createdAt,
+      };
+    });
+
+    // One product cannot appear twice: two lines for the same thing is a
+    // mis-key, and silently adding both would be the wrong guess.
+    const seen = new Set();
+    for (const entry of entries) {
+      if (seen.has(entry.productId)) {
+        throw badRequest(`"${entry.productName}" is on this delivery twice. Put the whole amount on one line.`);
+      }
+      seen.add(entry.productId);
+    }
+
+    return this.stockEntries.addMany(entries);
+  }
+
   /** Removes a stock entry, for when a delivery was keyed in wrongly. */
   async removeStockEntry(id) {
     return this.stockEntries.remove(id);

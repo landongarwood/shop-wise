@@ -1,4 +1,4 @@
-import { div, append, clear } from '../core/dom.js';
+import { el, div, append, clear } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 
 /**
@@ -15,9 +15,15 @@ import { icon } from '../core/icons.js';
  *   active  — the thing to do now
  *   done    — answered, and shown ticked
  *
+ * A step can be pulled out into a sticky side column. That is for the one that
+ * shows what has been built up so far — a running sale — which is worth having
+ * in view while the earlier steps are still being worked through, rather than
+ * off the bottom of a long product list.
+ *
  * @param {Array<{key: string, title: string, hint?: string}>} definitions
+ * @param {{aside?: string[]}} [options] keys to place in the side column
  */
-export function createSteps(definitions) {
+export function createSteps(definitions, { aside = [] } = {}) {
   const entries = new Map();
 
   const nodes = definitions.map((definition, index) => {
@@ -39,6 +45,10 @@ export function createSteps(definitions) {
     return node;
   });
 
+  const inAside = (index) => aside.includes(definitions[index].key);
+  const main = nodes.filter((_, index) => !inAside(index));
+  const side = nodes.filter((_, index) => inAside(index));
+
   /**
    * @param {string} key
    * @param {'waiting'|'active'|'done'} state
@@ -59,8 +69,15 @@ export function createSteps(definitions) {
 
   for (const key of entries.keys()) set(key, 'waiting');
 
+  const node = side.length
+    ? div({ class: 'steps steps--split' }, [
+        div({ class: 'steps__main' }, main),
+        el('aside', { class: 'steps__aside' }, side),
+      ])
+    : div({ class: 'steps' }, nodes);
+
   return {
-    node: div({ class: 'steps' }, nodes),
+    node,
     /** Where a step's content goes. */
     body: (key) => entries.get(key).body,
     set,

@@ -133,7 +133,11 @@ export async function openNewCustomerSheet({ api }) {
  * is, and stays editable because the whole point is that it varies.
  */
 export async function openSaleLineSheet({ product, format, initial = null, onHand = null }) {
-  const quantity = createStepper({ value: initial?.quantity ?? 1, step: 1, min: 0 });
+  // Not more than is on the shelf. Stock that the books have not caught up
+  // with is taken in on the stock screen, where it leaves a record, rather
+  // than conjured by a sale that makes the figures impossible.
+  const limit = typeof onHand === 'number' ? onHand : Infinity;
+  const quantity = createStepper({ value: Math.min(initial?.quantity ?? 1, limit), step: 1, min: 0, max: limit });
   const price = field({
     labelText: `Price per ${product.unit || 'item'}`,
     inputMode: 'decimal',
@@ -160,7 +164,9 @@ export async function openSaleLineSheet({ product, format, initial = null, onHan
     div({ class: 'section' }, [
       div({ class: 'field__label', text: `How many ${product.unit || 'items'}?` }),
       quantity.node,
-      onHand === null ? null : div({ class: 'field__hint', text: `${format.quantity(onHand)} in stock` }),
+      onHand === null
+        ? null
+        : div({ class: 'field__hint', text: `${format.quantity(onHand)} ${product.unit ?? ''} in stock`.trim() }),
     ]),
     price.node,
     total,
@@ -176,6 +182,16 @@ export async function openSaleLineSheet({ product, format, initial = null, onHan
       price.showProblem(null);
 
       if (!(quantity.value > 0)) return false;
+
+      if (quantity.value > limit) {
+        price.showProblem(
+          `Only ${format.quantity(limit)} ${product.unit ?? ''} in stock. Take in more on the stock screen first.`.replace(
+            '  ',
+            ' '
+          )
+        );
+        return false;
+      }
 
       const minor = Math.round(Number(price.value.replace(',', '.')) * 100);
       if (!Number.isFinite(minor) || minor < 0) {
