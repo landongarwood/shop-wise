@@ -5,50 +5,58 @@
  * and dark mode is nothing more than a second set of values for the same names.
  * No component hard-codes a colour, so the two themes cannot drift apart.
  *
+ * The palette is a neutral ramp with deliberate steps, chosen so that each pair
+ * that has to be told apart actually can be: body text at 4.5:1 or better
+ * against every surface it sits on, control outlines and status colours at 3:1,
+ * and dividers far enough from their background to be seen. The steps are not a
+ * matter of taste — test/ui/contrast.test.js measures them.
+ *
  * Sizes that should follow the window use clamp(min, preferred, max), so the
  * layout breathes with the window instead of snapping at a few breakpoints.
  */
 
 :root {
-  /* Surfaces, from furthest back to nearest front. */
-  --bg: #f6f7f9;
+  /* Surfaces, from furthest back to nearest front. Each step is big enough to
+     be seen, which is what makes a button look like a button. */
+  --bg: #f1f4f8;
   --surface: #ffffff;
-  --surface-sunken: #eef0f3;
-  --surface-hover: #e9ecf1;
-  --border: #e2e5ea;
-  --border-strong: #c7ccd4;
+  --surface-sunken: #e2e8f0;
+  --surface-hover: #d5dde8;
+  --border: #c3ccd9;
+  --border-strong: #78859a;
 
   /* Text. */
-  --text: #15171c;
-  --text-soft: #596270;
-  --text-faint: #8a93a1;
+  --text: #0f1319;
+  --text-soft: #46526a;
+  --text-faint: #5d6880;
 
   /* The one accent, for the action the user most likely wants. */
-  --accent: #1f4fd8;
-  --accent-hover: #1a43ba;
+  --accent: #1b4fd1;
+  --accent-hover: #1743b4;
   --accent-text: #ffffff;
-  --accent-soft: #e9edfd;
+  --accent-soft: #dfe8fc;
 
   /* Money has a direction: owed to the shop, or paid to the shop. */
-  --debt: #b42318;
-  --debt-soft: #fdeceb;
-  --paid: #027a48;
-  --paid-soft: #e6f4ed;
-  --warn: #b54708;
-  --warn-soft: #fdf0e6;
+  --debt: #b02318;
+  --debt-soft: #fbe5e3;
+  --paid: #046c3d;
+  --paid-soft: #daefe4;
+  --warn: #9c4209;
+  --warn-soft: #fbeade;
 
   /*
    * Notifications are solid and saturated rather than tinted: they appear for a
    * few seconds over whatever the user is doing, so they have to be recognised
-   * at a glance and by colour alone.
+   * at a glance and by colour alone. The same values serve both themes, so the
+   * white label is guaranteed to be readable either way.
    */
-  --notice-ok: #0b7a4b;
-  --notice-warn: #b4530a;
-  --notice-error: #b42318;
+  --notice-ok: #07653c;
+  --notice-warn: #8d3f08;
+  --notice-error: #a21d14;
   --notice-text: #ffffff;
 
-  --shadow-float: 0 10px 30px rgb(16 24 40 / 14%), 0 2px 6px rgb(16 24 40 / 8%);
-  --shadow-high: 0 20px 44px rgb(16 24 40 / 18%), 0 4px 12px rgb(16 24 40 / 10%);
+  --shadow-float: 0 10px 30px rgb(15 23 42 / 16%), 0 2px 6px rgb(15 23 42 / 10%);
+  --shadow-high: 0 20px 44px rgb(15 23 42 / 20%), 0 4px 12px rgb(15 23 42 / 12%);
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -85,34 +93,31 @@
 }
 
 :root[data-theme='dark'] {
-  --bg: #0e1015;
-  --surface: #171a21;
-  --surface-sunken: #13161c;
-  --surface-hover: #212530;
-  --border: #272c36;
-  --border-strong: #3a414e;
+  /* Not near-black: a dark interface still needs room for surfaces to step up
+     out of the page, or every control sinks into the background. */
+  --bg: #0b0e13;
+  --surface: #161b24;
+  --surface-sunken: #1f2632;
+  --surface-hover: #2a323f;
+  --border: #39424f;
+  --border-strong: #6b7788;
 
-  --text: #e9ebef;
-  --text-soft: #a2abb9;
-  --text-faint: #737d8d;
+  --text: #e9edf4;
+  --text-soft: #adb8c9;
+  --text-faint: #8d98ab;
 
-  --accent: #5b7cfa;
-  --accent-hover: #7190fb;
-  --accent-text: #0a0d14;
-  --accent-soft: #1a2240;
+  --accent: #6c95ff;
+  --accent-hover: #86a9ff;
+  --accent-text: #06101f;
+  --accent-soft: #1c2a4a;
 
-  --debt: #f97066;
-  --debt-soft: #2b1715;
-  --paid: #47cd89;
-  --paid-soft: #0f251b;
-  --warn: #fdb022;
-  --warn-soft: #2a1f10;
+  --debt: #ff8d82;
+  --debt-soft: #2f1613;
+  --paid: #4fd18b;
+  --paid-soft: #0f2b1e;
+  --warn: #f7bc4d;
+  --warn-soft: #2d2110;
 
-  --notice-ok: #119a62;
-  --notice-warn: #c2650c;
-  --notice-error: #cf3b2f;
-  --notice-text: #ffffff;
-
-  --shadow-float: 0 10px 30px rgb(0 0 0 / 50%);
-  --shadow-high: 0 22px 48px rgb(0 0 0 / 62%);
+  --shadow-float: 0 10px 30px rgb(0 0 0 / 55%);
+  --shadow-high: 0 22px 48px rgb(0 0 0 / 66%);
 }

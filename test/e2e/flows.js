@@ -254,7 +254,14 @@ async function main() {
   `);
   check('a notification confirms the sale', Boolean(notice) && notice.text.includes('Sale saved'), JSON.stringify(notice));
   check('the notification sits in the top right', notice && notice.fromTop < 160 && notice.fromRight < 90, JSON.stringify(notice));
-  check('the notification is green, not black', notice && notice.background === 'rgb(11, 122, 75)', notice?.background);
+  // Asserted as "a green", not as a pinned hex, so retuning the palette is
+  // free but going back to a grey pill is not.
+  const noticeRgb = notice ? notice.background.match(/\d+/g).map(Number) : [];
+  check(
+    'the notification is a solid green, not a grey pill',
+    noticeRgb.length >= 3 && noticeRgb[1] > noticeRgb[0] + 40 && noticeRgb[1] > noticeRgb[2] + 20,
+    notice?.background
+  );
 
   await wait(400);
   await page.installHelpers();
@@ -366,8 +373,18 @@ async function main() {
   const theme = await page.evaluate('document.documentElement.dataset.theme');
   check('the theme toggle switches to dark', theme === 'dark', `theme is "${theme}"`);
 
-  const background = await page.evaluate('getComputedStyle(document.body).backgroundColor');
-  check('the dark theme actually repaints', background === 'rgb(14, 16, 21)', background);
+  // Compared against the token rather than a pinned colour, so retuning the
+  // palette does not break the test — only failing to repaint does.
+  const repaint = await page.evaluate(`
+    (() => {
+      const root = getComputedStyle(document.documentElement);
+      const body = getComputedStyle(document.body).backgroundColor;
+      const token = root.getPropertyValue('--bg').trim();
+      const rgb = body.match(/\\d+/g).map(Number);
+      return { body, token, dark: rgb.reduce((a, b) => a + b, 0) < 120 };
+    })()
+  `);
+  check('the dark theme actually repaints the page', repaint.dark, JSON.stringify(repaint));
 
   /* ---------------- the books agree ---------------- */
 

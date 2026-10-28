@@ -18,10 +18,10 @@
   width: 44px;
   height: 44px;
   flex: 0 0 auto;
-  border: 0;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-  color: var(--text-soft);
+  background: var(--surface);
+  color: var(--text);
   cursor: pointer;
   transition: background var(--transition), color var(--transition);
 }
@@ -83,9 +83,9 @@
   gap: var(--space-2);
   min-height: var(--tap-min);
   padding: 0 var(--space-5);
-  border: 0;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: var(--surface-sunken);
+  background: var(--surface);
   color: var(--text);
   font-size: 16px;
   font-weight: 600;
@@ -94,7 +94,8 @@
 }
 
 .button:hover:not(:disabled) {
-  background: var(--surface-hover);
+  background: var(--surface-sunken);
+  border-color: var(--text-faint);
 }
 
 .button:active:not(:disabled) {
@@ -107,26 +108,31 @@
 }
 
 .button--primary {
+  border-color: transparent;
   background: var(--accent);
   color: var(--accent-text);
 }
 
 .button--primary:hover:not(:disabled) {
+  border-color: transparent;
   background: var(--accent-hover);
 }
 
 .button--danger {
+  border-color: transparent;
   background: var(--debt-soft);
   color: var(--debt);
 }
 
 .button--quiet {
+  border-color: transparent;
   background: transparent;
   color: var(--text-soft);
   font-weight: 500;
 }
 
 .button--quiet:hover:not(:disabled) {
+  border-color: transparent;
   background: var(--surface-hover);
   color: var(--text);
 }
@@ -159,7 +165,7 @@
   gap: var(--space-3);
   min-height: clamp(126px, 15vh, 168px);
   padding: clamp(16px, 1.8vw, 26px);
-  border: 0;
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
   color: inherit;
@@ -187,6 +193,7 @@
 }
 
 .tile--primary {
+  border-color: transparent;
   background: var(--accent);
   color: var(--accent-text);
 }
@@ -293,6 +300,7 @@
 /* A flat panel, used where content genuinely needs a quiet backdrop. */
 .card {
   padding: clamp(16px, 1.8vw, 24px);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
 }
@@ -710,9 +718,9 @@
 .chip {
   min-height: 40px;
   padding: 0 var(--space-4);
-  border: 0;
+  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  background: var(--surface-sunken);
+  background: var(--surface);
   color: var(--text-soft);
   font-size: 14px;
   font-weight: 600;
@@ -721,13 +729,15 @@
 }
 
 .chip:hover {
-  background: var(--surface-hover);
+  border-color: var(--border-strong);
+  background: var(--surface-sunken);
   color: var(--text);
 }
 
 /* After the base rule on purpose: same specificity, so order decides. */
 .chip--active,
 .chip--active:hover {
+  border-color: transparent;
   background: var(--accent);
   color: var(--accent-text);
 }
@@ -750,9 +760,9 @@
   flex: 0 0 auto;
   width: var(--tap-big);
   min-height: var(--tap-big);
-  border: 0;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: var(--surface-sunken);
+  background: var(--surface);
   color: var(--text);
   font-size: 26px;
   font-weight: 600;
@@ -827,6 +837,7 @@
   gap: var(--space-4);
   justify-items: center;
   padding: clamp(34px, 7vw, 76px) var(--space-5);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
   text-align: center;
@@ -859,6 +870,7 @@
   width: 100%;
   max-width: min(520px, 100%);
   max-height: min(88vh, 780px);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-high);
