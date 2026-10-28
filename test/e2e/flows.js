@@ -260,7 +260,7 @@ async function main() {
   await page.installHelpers();
 
   text = await page.text();
-  check('saving returns home', text.includes('Add stock'));
+  check('saving returns home', text.includes('Take payment') && text.includes('Sales report'));
 
   // Scoped to the screen, since the confirmation notification is still on top
   // of it and does quote the amount.
@@ -293,9 +293,12 @@ async function main() {
 
   await page.click('.tile', 'Customers');
   text = await page.text();
-  check('the customer list shows the remaining debt', text.includes('owes $14.50'), text.slice(0, 300));
+  check('the customer table shows the remaining balance', text.includes('$14.50'), text.slice(0, 300));
+  check('the customer table has sortable column headings', (await page.evaluate(
+    `document.querySelectorAll('.table__th--sortable').length`
+  )) >= 4);
 
-  await page.click('.row', 'Alice Mwangi');
+  await page.click('tbody tr', 'Alice Mwangi');
   text = await page.text();
   check('the customer page headlines the balance', text.includes('$14.50'), text.slice(0, 220));
   check('the history holds both the sale and the payment', text.includes('Sale') && text.includes('Payment'));

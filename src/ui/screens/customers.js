@@ -1,15 +1,16 @@
-import { div, button, append, clear } from '../core/dom.js';
+import { div, button, input, span } from '../core/dom.js';
+import { icon } from '../core/icons.js';
 import { toastOk } from '../core/toast.js';
-import { searchBox } from '../widgets/pickers.js';
+import { dataTable, statusDot, by } from '../widgets/table.js';
 import { openNewCustomerSheet } from '../widgets/forms.js';
-import { badge, emptyState, stat } from '../widgets/states.js';
+import { emptyState, stat } from '../widgets/states.js';
 
 /**
  * Who owes what.
  *
  * Sorted by debt, largest first, because the reason to open this screen is
- * almost always to see who has not paid. Everyone settled sits at the bottom
- * out of the way.
+ * almost always to see who has not paid. Every column sorts, so the same table
+ * answers "who buys the most" without a second screen.
  */
 export async function customers(ctx) {
   const { api, format, go, reload } = ctx;
@@ -37,68 +38,182 @@ export async function customers(ctx) {
     };
   }
 
-  const sorted = people.slice().sort(byDebtThenName);
+  const owed = people.reduce((sum, person) => sum + Math.max(0, person.balance), 0);
+  const credit = people.reduce((sum, person) => sum + Math.max(0, -person.balance), 0);
+  const owingCount = people.filter((person) => person.balance > 0).length;
 
-  const owed = sorted.reduce((sum, person) => sum + Math.max(0, person.balance), 0);
-  const credit = sorted.reduce((sum, person) => sum + Math.max(0, -person.balance), 0);
+  const summary = div({ class: 'summary' }, [
+    stat({
+      label: 'Owed to you',
+      value: format.money(owed),
+      hint: `${owingCount} ${owingCount === 1 ? 'customer owes' : 'customers owe'} you`,
+      tone: owed > 0 ? 'debt' : null,
+    }),
+    stat({ label: 'Paid ahead', value: format.money(credit), tone: credit > 0 ? 'paid' : null }),
+    stat({ label: 'Customers', value: String(people.length) }),
+  ]);
 
-  const rows = div({ class: 'rows' });
+  /* ---------- filtering ---------- */
 
-  const draw = (term = '') => {
-    clear(rows);
+  let term = '';
+  let filter = 'all';
 
-    const matches = term
-      ? sorted.filter((person) => `${person.name} ${person.phone ?? ''}`.toLowerCase().includes(term))
-      : sorted;
+  const FILTERS = [
+    { key: 'all', label: 'All', count: people.length, test: () => true },
+    { key: 'owing', label: 'Owing', count: owingCount, test: (person) => person.balance > 0 },
+    {
+      key: 'settled',
+      label: 'Settled',
+      count: people.filter((person) => person.balance <= 0).length,
+      test: (person) => person.balance <= 0,
+    },
+  ];
 
-    if (!matches.length) {
-      append(rows, div({ class: 'row row--static' }, div({ class: 'soft', text: 'Nothing matches that.' })));
-      return;
-    }
+  const visible = () =>
+    people
+      .filter(FILTERS.find((candidate) => candidate.key === filter).test)
+      .filter((person) => `${person.name} ${person.phone ?? ''}`.toLowerCase().includes(term));
 
-    append(
-      rows,
-      matches.map((person) => {
-        const position = format.balance(person.balance);
+  const search = input({
+    class: 'input input--search',
+    type: 'search',
+    placeholder: 'Search customers',
+    ariaLabel: 'Search customers',
+    autocomplete: 'off',
+    oninput: () => {
+      term = search.value.trim().toLowerCase();
+      refresh();
+    },
+  });
 
-        return button({ class: 'row', onclick: () => go('customer', { id: person.id }) }, [
-          div({ class: 'row__main' }, [
-            div({ class: 'row__title', text: person.name }),
-            div({
-              class: 'row__sub',
-              text: person.phone || `${format.money(person.charged)} bought in total`,
-            }),
-          ]),
-          badge(position.text, position.tone),
-        ]);
-      })
+  const chips = div({ class: 'chips' });
+  const countLine = div({ class: 'picker__count' });
+
+  const drawChips = () => {
+    chips.replaceChildren(
+      ...FILTERS.map((option) =>
+        button(
+          {
+            class: `chip${filter === option.key ? ' chip--active' : ''}`,
+            onclick: () => {
+              filter = option.key;
+              drawChips();
+              refresh();
+            },
+          },
+          [option.label, span({ class: 'chip__count', text: String(option.count) })]
+        )
+      )
     );
   };
 
-  const search = searchBox({ placeholder: 'Search customers', onChange: draw });
-  draw();
+  function refresh() {
+    const rows = visible();
+    table.setRows(rows);
+    countLine.textContent =
+      rows.length === people.length
+        ? `${people.length} ${people.length === 1 ? 'customer' : 'customers'}`
+        : `${rows.length} of ${people.length} customers`;
+  }
 
-  const body = div({}, [
-    div({ class: 'summary' }, [
-      stat({ label: 'Owed to you', value: format.money(owed), tone: owed > 0 ? 'debt' : null }),
-      stat({ label: 'Paid ahead', value: format.money(credit), tone: credit > 0 ? 'paid' : null }),
-    ]),
-    people.length > 6 ? search.node : null,
-    rows,
+  /* ---------- the table ---------- */
+
+  const table = dataTable({
+    rows: people,
+    initialSort: { key: 'balance', direction: 'desc' },
+    onRowClick: (person) => go('customer', { id: person.id }),
+    empty: 'Nothing matches that.',
+    columns: [
+      {
+        key: 'status',
+        label: '',
+        width: '1%',
+        cell: (person) =>
+          person.balance > 0
+            ? statusDot('out', 'Owes you')
+            : person.balance < 0
+              ? statusDot('ok', 'Paid ahead')
+              : statusDot('neutral', 'Settled up'),
+      },
+      {
+        key: 'name',
+        label: 'Customer',
+        grow: true,
+        sort: by.text((person) => person.name),
+        cell: (person) => person.name,
+      },
+      {
+        key: 'phone',
+        label: 'Phone',
+        sort: by.text((person) => person.phone),
+        cell: (person) => span({ class: 'table__sub', text: person.phone || '—' }),
+      },
+      {
+        key: 'charged',
+        label: 'Bought',
+        numeric: true,
+        sort: by.number((person) => person.charged),
+        cell: (person) => format.money(person.charged),
+      },
+      {
+        key: 'paid',
+        label: 'Paid',
+        numeric: true,
+        sort: by.number((person) => person.paid),
+        cell: (person) => format.money(person.paid),
+      },
+      {
+        key: 'balance',
+        label: 'Balance',
+        numeric: true,
+        strong: true,
+        sort: by.number((person) => person.balance),
+        cell: (person) =>
+          span({
+            class: person.balance > 0 ? 'money--debt' : person.balance < 0 ? 'money--paid' : 'soft',
+            text: person.balance === 0 ? '—' : format.money(Math.abs(person.balance)),
+          }),
+      },
+      {
+        key: 'state',
+        label: '',
+        cell: (person) =>
+          span({
+            class: 'table__sub',
+            text: person.balance > 0 ? 'owes' : person.balance < 0 ? 'in credit' : 'settled',
+          }),
+      },
+      {
+        key: 'pay',
+        label: '',
+        width: '1%',
+        cell: (person) =>
+          person.balance > 0
+            ? button(
+                {
+                  class: 'table__action',
+                  title: `Record a payment from ${person.name}`,
+                  onclick: () => go('payment', { customer: person }),
+                },
+                ['Take payment']
+              )
+            : '',
+      },
+    ],
+  });
+
+  drawChips();
+  refresh();
+
+  const toolbar = div({ class: 'toolbar' }, [
+    div({ class: 'toolbar__search' }, search),
+    chips,
+    button({ class: 'button', onclick: addCustomer }, [icon('userPlus', { size: 18 }), 'New customer']),
   ]);
 
   return {
     title: 'Customers',
-    subtitle: `${people.length} ${people.length === 1 ? 'customer' : 'customers'}`,
-    actions: [{ label: 'New customer', icon: 'userPlus', onClick: addCustomer }],
-    body,
+    subtitle: `${people.length} ${people.length === 1 ? 'customer' : 'customers'} · tap a row for history`,
+    body: div({}, [summary, toolbar, countLine, table.node]),
   };
-}
-
-/** Biggest debt first; settled and credit accounts after, alphabetically. */
-function byDebtThenName(a, b) {
-  if (a.balance > 0 && b.balance <= 0) return -1;
-  if (b.balance > 0 && a.balance <= 0) return 1;
-  if (a.balance !== b.balance && a.balance > 0) return b.balance - a.balance;
-  return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 }

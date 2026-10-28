@@ -13,25 +13,34 @@ No login, no accounts, no cloud. One person, one PC.
 
 ## What it does
 
-Three things the shopkeeper does, each one tap from the home screen:
+Two actions, each one tap from the home screen:
 
 | | |
 | --- | --- |
 | **Sell** | Pick a customer, then find products in a searchable list. Each pick asks how many and at what price — pre-filled with the usual price, editable because it varies. |
-| **Add stock** | Find a product, say how much came in. Saves immediately, so a long delivery can't be half-lost. |
 | **Take payment** | Pick a customer, enter what they paid. "Pay all" is one tap. Any date, any amount. |
 
-And four things they look up:
+And three screens to look things up on:
 
 | | |
 | --- | --- |
-| **Customers** | Everyone with their balance, biggest debt first. |
+| **Stock** | Every product with price, taken in, sold, on hand and value. Search, filter to what is Low or Out, sort any column, and take a delivery in from the row itself. |
+| **Customers** | Everyone with bought, paid and balance, biggest debt first, with a Take payment button on anyone who owes. |
 | **One customer** | Balance as a headline, then sales and payments on one timeline with the balance as it stood after each — so a disputed total can be read down until you disagree. |
-| **Stock** | What's on the shelves; anything short floats to the top. |
-| **Sales report** | What sold over any period — today, this month, last month, or a custom range — ranked by the money it brought in, plus who bought and a day-by-day breakdown. |
+| **Sales report** | What sold over any period — today, this month, last month, or a custom range — ranked by revenue with a share bar, plus who bought and a day-by-day breakdown. |
 
-Products are a searchable list rather than a grid of tiles, because a shop can
-easily carry hundreds. Typing filters as you go and Enter takes the top match,
+There is no separate "add stock" screen. A delivery changes a figure that lives
+on the stock table, so it is entered there: one tap on the row's **+ Add**, a
+quantity, done, without losing your place.
+
+The three lookup screens are built on one dense, sortable table
+([src/ui/widgets/table.js](src/ui/widgets/table.js)): a sticky header, numbers
+right-aligned on tabular figures so digits line up, light banding to keep a long
+list scannable, and a coloured status dot so a shortage registers before
+anything is read.
+
+When picking a product to sell, it is a searchable list rather than a grid of
+tiles, because a shop can easily carry hundreds. Typing filters as you go and Enter takes the top match,
 so a sale can be entered without the hand leaving the keyboard. The list scrolls
 in its own area, so the running total and the save button never get pushed off
 the screen. Measured with a 500-product catalogue: 43 ms to open the sell screen

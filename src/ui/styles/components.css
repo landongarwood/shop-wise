@@ -262,6 +262,10 @@
   color: var(--paid);
 }
 
+.stat--warn .stat__value {
+  color: var(--warn);
+}
+
 /* ---------- sections ---------- */
 
 .section {
@@ -349,8 +353,8 @@
   align-items: center;
   gap: clamp(10px, 1.5vw, 20px);
   width: 100%;
-  min-height: var(--tap-min);
-  padding: var(--space-3) var(--space-2);
+  min-height: 46px;
+  padding: var(--space-2);
   border: 0;
   border-bottom: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -379,7 +383,7 @@
 }
 
 .row__title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   overflow: hidden;
   white-space: nowrap;
@@ -397,8 +401,241 @@
 }
 
 .row__amount {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
+}
+
+/* ---------- data table ---------- */
+
+/*
+ * Figures are what the stock, customer and report screens are for, so they use
+ * a real table: columns that read down, numbers right-aligned on tabular
+ * figures so the digits line up, and rows tight enough to compare a dozen at a
+ * glance. The header stays put while hundreds of rows scroll under it.
+ */
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-top: 1px solid var(--border);
+}
+
+.table-wrap--scroll {
+  max-height: clamp(260px, 58vh, 760px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 7px var(--space-3);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.table__th--sortable {
+  cursor: pointer;
+}
+
+.table__th--sortable:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.table__th--active {
+  color: var(--accent);
+}
+
+.table__caret {
+  margin-left: 4px;
+  font-size: 9px;
+}
+
+.table td {
+  padding: 6px var(--space-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/*
+ * Exactly one column takes the slack — the name. With table-layout: auto that
+ * is width:100% here and shrink-to-fit everywhere else; the nowrap on every
+ * cell does the shrinking. A name too long for the window scrolls the wrapper
+ * sideways rather than squeezing the figures.
+ */
+.table th.table__grow,
+.table td.table__grow {
+  width: 100%;
+}
+
+/* A very light banding, which is what makes a long table scannable. */
+.table tbody tr:nth-child(even) {
+  background: var(--surface-sunken);
+}
+
+.table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+.table__row--click {
+  cursor: pointer;
+}
+
+.table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.table__strong {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.table__empty td {
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+}
+
+.table__empty,
+.table__empty:hover {
+  background: transparent !important;
+}
+
+.table__sub {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+/* A compact trailing action, e.g. "+ Add" on every stock row. */
+.table__action {
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.table__action:hover {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+/* ---------- status dot ---------- */
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-pill);
+  background: var(--text-faint);
+}
+
+.dot--ok {
+  background: var(--paid);
+}
+
+.dot--low {
+  background: var(--warn);
+}
+
+.dot--out {
+  background: var(--debt);
+}
+
+.dot--neutral {
+  background: var(--border-strong);
+}
+
+/* ---------- share bar ---------- */
+
+/*
+ * A proportion is compared, not read: the bar does the comparing and the
+ * number is there for when the exact figure matters.
+ */
+.share {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.share__track {
+  width: clamp(40px, 7vw, 110px);
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-hover);
+  overflow: hidden;
+}
+
+.share__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+
+.share__value {
+  min-width: 34px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+/* ---------- filter bar ---------- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.toolbar__search {
+  flex: 1 1 260px;
+  min-width: 180px;
+}
+
+.toolbar__search .input {
+  min-height: 42px;
+  font-size: 15px;
+}
+
+.chip--active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.chip--active:hover {
+  background: var(--accent-hover);
+  color: var(--accent-text);
+}
+
+.chip__count {
+  margin-left: 6px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- badges ---------- */

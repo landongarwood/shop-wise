@@ -1,17 +1,21 @@
-import { div, button, append, clear } from '../core/dom.js';
+import { div, button, input, span } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { openSheet, confirmSheet } from '../core/sheet.js';
 import { toastOk } from '../core/toast.js';
-import { searchBox } from '../widgets/pickers.js';
+import { dataTable, statusDot, by } from '../widgets/table.js';
 import { openAddStockSheet, openEditProductSheet, openNewProductSheet } from '../widgets/forms.js';
-import { badge, emptyState, stat } from '../widgets/states.js';
+import { emptyState, stat } from '../widgets/states.js';
 
 /**
- * What is on the shelves.
+ * Stock: what is on the shelves, and the place stock is taken in.
  *
- * Anything short appears at the top, because that is the reason to open this
- * screen. Tapping a product opens the few things one can do with it rather than
- * hiding them behind menus.
+ * There is no separate "add stock" screen. A delivery changes a number that
+ * lives here, so it is entered here — one tap on the row's Add button, a
+ * quantity, done, without losing your place in the list.
+ *
+ * The table is built for a catalogue of hundreds: search, filters for what is
+ * low or out, every column sortable, and a status dot so a shortage is visible
+ * before anything is read.
  */
 export async function stock(ctx) {
   const { api, format, reload } = ctx;
@@ -38,70 +42,194 @@ export async function stock(ctx) {
     };
   }
 
-  const sorted = products.slice().sort(byShortageThenName);
-  const stockValue = products.reduce((sum, product) => sum + Math.round(product.price * Math.max(0, product.onHand)), 0);
-  const lowCount = products.filter((product) => product.low).length;
+  /* ---------- taking stock in ---------- */
 
-  const rows = div({ class: 'rows' });
+  const addStock = async (product) => {
+    const entry = await openAddStockSheet({ api, product, format, onHand: product.onHand });
+    if (!entry) return;
 
-  const draw = (term = '') => {
-    clear(rows);
+    toastOk(`${format.quantity(entry.quantity)} ${product.unit ?? ''} of ${product.name} added`.replace('  ', ' '));
+    await reload();
+  };
 
-    const matches = term ? sorted.filter((product) => product.name.toLowerCase().includes(term)) : sorted;
+  /* ---------- figures ---------- */
 
-    if (!matches.length) {
-      append(rows, div({ class: 'row row--static' }, div({ class: 'soft', text: 'Nothing matches that.' })));
-      return;
-    }
+  const lowCount = products.filter((product) => product.low && product.onHand > 0).length;
+  const outCount = products.filter((product) => product.onHand <= 0).length;
+  const stockValue = products.reduce(
+    (sum, product) => sum + Math.round(product.price * Math.max(0, product.onHand)),
+    0
+  );
 
-    append(
-      rows,
-      matches.map((product) =>
-        button({ class: 'row', onclick: () => openProductSheet(product, ctx) }, [
-          div({ class: 'row__main' }, [
-            div({ class: 'row__title', text: product.name }),
-            div({
-              class: 'row__sub tnum',
-              text: `${format.money(product.price)} per ${product.unit || 'item'} · ${format.quantity(
-                product.sold
-              )} sold`,
-            }),
-          ]),
-          product.onHand <= 0
-            ? badge('none left', 'debt')
-            : product.low
-              ? badge(`${format.quantity(product.onHand)} ${product.unit ?? ''} left`.trim(), 'warn')
-              : div({ class: 'row__end' }, [
-                  div({ class: 'row__amount tnum', text: format.quantity(product.onHand) }),
-                  div({ class: 'faint', text: product.unit || 'in stock' }),
-                ]),
-        ])
+  const summary = div({ class: 'summary' }, [
+    stat({ label: 'Products', value: String(products.length) }),
+    stat({
+      label: 'Running low',
+      value: String(lowCount),
+      hint: 'at or below your low-stock level',
+      tone: lowCount ? 'warn' : null,
+    }),
+    stat({ label: 'Out of stock', value: String(outCount), tone: outCount ? 'debt' : null }),
+    stat({ label: 'Stock value', value: format.money(stockValue), hint: 'at your usual prices' }),
+  ]);
+
+  /* ---------- filtering ---------- */
+
+  let term = '';
+  let filter = 'all';
+
+  const FILTERS = [
+    { key: 'all', label: 'All', count: products.length, test: () => true },
+    { key: 'low', label: 'Low', count: lowCount, test: (product) => product.low && product.onHand > 0 },
+    { key: 'out', label: 'Out', count: outCount, test: (product) => product.onHand <= 0 },
+  ];
+
+  const visible = () =>
+    products
+      .filter(FILTERS.find((candidate) => candidate.key === filter).test)
+      .filter((product) => product.name.toLowerCase().includes(term));
+
+  const search = input({
+    class: 'input input--search',
+    type: 'search',
+    placeholder: 'Search products',
+    ariaLabel: 'Search products',
+    autocomplete: 'off',
+    oninput: () => {
+      term = search.value.trim().toLowerCase();
+      refresh();
+    },
+  });
+
+  const chips = div({ class: 'chips' });
+  const countLine = div({ class: 'picker__count' });
+
+  const drawChips = () => {
+    chips.replaceChildren(
+      ...FILTERS.map((option) =>
+        button(
+          {
+            class: `chip${filter === option.key ? ' chip--active' : ''}`,
+            onclick: () => {
+              filter = option.key;
+              drawChips();
+              refresh();
+            },
+          },
+          [option.label, span({ class: 'chip__count', text: String(option.count) })]
+        )
       )
     );
   };
 
-  const search = searchBox({ placeholder: 'Search products', onChange: draw });
-  draw();
+  function refresh() {
+    const rows = visible();
+    table.setRows(rows);
+    countLine.textContent =
+      rows.length === products.length
+        ? `${products.length} ${products.length === 1 ? 'product' : 'products'}`
+        : `${rows.length} of ${products.length} products`;
+  }
 
-  const body = div({}, [
-    div({ class: 'summary' }, [
-      stat({ label: 'Products', value: String(products.length) }),
-      stat({
-        label: 'Running low',
-        value: String(lowCount),
-        hint: lowCount ? 'at or below your low-stock level' : 'nothing to restock',
-        tone: lowCount ? 'debt' : null,
-      }),
-      stat({ label: 'Stock value', value: format.money(stockValue), hint: 'at your usual prices' }),
-    ]),
-    products.length > 6 ? search.node : null,
-    rows,
+  /* ---------- the table ---------- */
+
+  const table = dataTable({
+    rows: products,
+    initialSort: { key: 'name', direction: 'asc' },
+    onRowClick: (product) => openProductSheet(product, ctx),
+    empty: 'No product matches that.',
+    columns: [
+      {
+        key: 'status',
+        label: '',
+        // 1% with nowrap is the shrink-to-fit idiom for an auto-layout table.
+        width: '1%',
+        cell: (product) =>
+          product.onHand <= 0
+            ? statusDot('out', 'Out of stock')
+            : product.low
+              ? statusDot('low', 'Running low')
+              : statusDot('ok', 'In stock'),
+      },
+      {
+        key: 'name',
+        label: 'Product',
+        grow: true,
+        sort: by.text((product) => product.name),
+        cell: (product) => product.name,
+      },
+      {
+        key: 'unit',
+        label: 'Unit',
+        sort: by.text((product) => product.unit),
+        cell: (product) => span({ class: 'table__sub', text: product.unit || '—' }),
+      },
+      {
+        key: 'price',
+        label: 'Price',
+        numeric: true,
+        sort: by.number((product) => product.price),
+        cell: (product) => format.money(product.price),
+      },
+      {
+        key: 'added',
+        label: 'Taken in',
+        numeric: true,
+        sort: by.number((product) => product.added),
+        cell: (product) => format.quantity(product.added),
+      },
+      {
+        key: 'sold',
+        label: 'Sold',
+        numeric: true,
+        sort: by.number((product) => product.sold),
+        cell: (product) => format.quantity(product.sold),
+      },
+      {
+        key: 'onHand',
+        label: 'In stock',
+        numeric: true,
+        strong: true,
+        sort: by.number((product) => product.onHand),
+        cell: (product) =>
+          span({
+            class: product.onHand <= 0 ? 'money--debt' : product.low ? 'picker__low' : '',
+            text: format.quantity(product.onHand),
+          }),
+      },
+      {
+        key: 'value',
+        label: 'Value',
+        numeric: true,
+        sort: by.number((product) => product.price * Math.max(0, product.onHand)),
+        cell: (product) => format.money(Math.round(product.price * Math.max(0, product.onHand))),
+      },
+      {
+        key: 'add',
+        label: '',
+        width: '1%',
+        cell: (product) =>
+          button({ class: 'table__action', title: `Add stock to ${product.name}`, onclick: () => addStock(product) }, [
+            '+ Add',
+          ]),
+      },
+    ],
+  });
+
+  drawChips();
+  refresh();
+
+  const toolbar = div({ class: 'toolbar' }, [
+    div({ class: 'toolbar__search' }, search),
+    chips,
+    button({ class: 'button', onclick: addNewProduct }, [icon('plus', { size: 18 }), 'New product']),
   ]);
+
+  const body = div({}, [summary, toolbar, countLine, table.node]);
 
   return {
     title: 'Stock',
-    subtitle: `${products.length} ${products.length === 1 ? 'product' : 'products'}`,
-    actions: [{ label: 'New product', icon: 'plus', onClick: addNewProduct }],
+    subtitle: `${products.length} ${products.length === 1 ? 'product' : 'products'} · tap a row for details`,
     body,
   };
 }
@@ -172,15 +300,21 @@ async function openProductSheet(product, ctx) {
           ),
         ]),
 
-        div({ class: 'section__title', text: 'Stock added' }),
+        div({ class: 'section__title', text: 'Stock taken in' }),
         entries.length
           ? div(
               { class: 'rows' },
               entries.slice(0, 12).map((entry) =>
                 div({ class: 'row row--static' }, [
                   div({ class: 'row__main' }, [
-                    div({ class: 'row__title tnum', text: `+ ${format.quantity(entry.quantity)} ${product.unit ?? ''}`.trim() }),
-                    div({ class: 'row__sub', text: `${format.relativeDay(entry.at)}${entry.note ? ` · ${entry.note}` : ''}` }),
+                    div({
+                      class: 'row__title tnum',
+                      text: `+ ${format.quantity(entry.quantity)} ${product.unit ?? ''}`.trim(),
+                    }),
+                    div({
+                      class: 'row__sub',
+                      text: `${format.relativeDay(entry.at)}${entry.note ? ` · ${entry.note}` : ''}`,
+                    }),
                   ]),
                   button(
                     {
@@ -205,13 +339,8 @@ async function openProductSheet(product, ctx) {
                 ])
               )
             )
-          : div({ class: 'card soft', text: 'No stock has been added yet.' }),
+          : div({ class: 'card soft', text: 'No stock has been taken in yet.' }),
       ]),
   });
 }
 
-/** Out of stock first, then low, then the rest alphabetically. */
-function byShortageThenName(a, b) {
-  const rank = (product) => (product.onHand <= 0 ? 0 : product.low ? 1 : 2);
-  return rank(a) - rank(b) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-}

@@ -1,5 +1,6 @@
 import { div, button, input, append, span } from '../core/dom.js';
 import { stat, emptyState } from '../widgets/states.js';
+import { dataTable, by } from '../widgets/table.js';
 
 /**
  * What sold, over whatever stretch of time you ask for.
@@ -105,72 +106,126 @@ export async function reports(ctx) {
 
   /* ---------- breakdowns ---------- */
 
-  const productRows = div(
-    { class: 'rows' },
-    report.byProduct.map((row) =>
-      div({ class: 'row row--static' }, [
-        div({ class: 'row__main' }, [
-          div({ class: 'row__title', text: row.productName }),
-          div({
-            class: 'row__sub tnum',
-            text: `${format.quantity(row.quantity)} ${row.unit ?? ''} · average ${format.money(row.averagePrice)}`.replace(
-              '  ',
-              ' '
-            ),
-          }),
-        ]),
-        div({ class: 'row__end' }, [
-          div({ class: 'row__amount tnum', text: format.money(row.revenue) }),
-          div({ class: 'faint tnum', text: `${share(row.revenue, report.totals.salesTotal)}%` }),
-        ]),
-      ])
-    )
-  );
+  const productTable = dataTable({
+    rows: report.byProduct,
+    initialSort: { key: 'revenue', direction: 'desc' },
+    scroll: false,
+    columns: [
+      { key: 'name', label: 'Product', grow: true, sort: by.text((row) => row.productName), cell: (row) => row.productName },
+      {
+        key: 'quantity',
+        label: 'Quantity',
+        numeric: true,
+        sort: by.number((row) => row.quantity),
+        cell: (row) => `${format.quantity(row.quantity)} ${row.unit ?? ''}`.trim(),
+      },
+      {
+        key: 'average',
+        label: 'Average price',
+        numeric: true,
+        sort: by.number((row) => row.averagePrice),
+        cell: (row) => format.money(row.averagePrice),
+      },
+      {
+        key: 'revenue',
+        label: 'Revenue',
+        numeric: true,
+        strong: true,
+        sort: by.number((row) => row.revenue),
+        cell: (row) => format.money(row.revenue),
+      },
+      {
+        key: 'share',
+        label: 'Share',
+        numeric: true,
+        sort: by.number((row) => row.revenue),
+        cell: (row) => shareBar(row.revenue, report.totals.salesTotal),
+      },
+    ],
+  }).node;
 
-  const customerRows = div(
-    { class: 'rows' },
-    report.byCustomer.map((row) =>
-      button({ class: 'row', onclick: () => go('customer', { id: row.customerId }) }, [
-        div({ class: 'row__main' }, [
-          div({ class: 'row__title', text: row.customerName }),
-          div({ class: 'row__sub', text: `${row.saleCount} ${row.saleCount === 1 ? 'sale' : 'sales'}` }),
-        ]),
-        div({ class: 'row__end' }, div({ class: 'row__amount tnum', text: format.money(row.total) })),
-      ])
-    )
-  );
+  const customerTable = dataTable({
+    rows: report.byCustomer,
+    initialSort: { key: 'total', direction: 'desc' },
+    scroll: false,
+    onRowClick: (row) => go('customer', { id: row.customerId }),
+    columns: [
+      { key: 'name', label: 'Customer', grow: true, sort: by.text((row) => row.customerName), cell: (row) => row.customerName },
+      {
+        key: 'sales',
+        label: 'Sales',
+        numeric: true,
+        sort: by.number((row) => row.saleCount),
+        cell: (row) => String(row.saleCount),
+      },
+      {
+        key: 'total',
+        label: 'Total',
+        numeric: true,
+        strong: true,
+        sort: by.number((row) => row.total),
+        cell: (row) => format.money(row.total),
+      },
+      {
+        key: 'share',
+        label: 'Share',
+        numeric: true,
+        sort: by.number((row) => row.total),
+        cell: (row) => shareBar(row.total, report.totals.salesTotal),
+      },
+    ],
+  }).node;
 
-  const dayRows =
+  const dayTable =
     report.byDay.length > 1
-      ? div(
-          { class: 'rows' },
-          report.byDay
-            .slice()
-            .reverse()
-            .map((row) =>
-              div({ class: 'row row--static' }, [
-                div({ class: 'row__main' }, [
-                  div({ class: 'row__title', text: format.relativeDay(`${row.day}T12:00:00`) }),
-                  div({ class: 'row__sub', text: `${row.salesCount} ${row.salesCount === 1 ? 'sale' : 'sales'}` }),
-                ]),
-                div({ class: 'row__end' }, [
-                  div({ class: 'row__amount tnum', text: format.money(row.salesTotal) }),
-                  row.paymentsTotal
-                    ? div({ class: 'faint tnum money--paid', text: `${format.money(row.paymentsTotal)} paid` })
-                    : null,
-                ]),
-              ])
-            )
-        )
+      ? dataTable({
+          rows: report.byDay,
+          initialSort: { key: 'day', direction: 'desc' },
+          scroll: false,
+          columns: [
+            {
+              key: 'day',
+              label: 'Day',
+              grow: true,
+              sort: by.text((row) => row.day),
+              cell: (row) => format.relativeDay(`${row.day}T12:00:00`),
+            },
+            {
+              key: 'count',
+              label: 'Sales',
+              numeric: true,
+              sort: by.number((row) => row.salesCount),
+              cell: (row) => String(row.salesCount),
+            },
+            {
+              key: 'sold',
+              label: 'Sold',
+              numeric: true,
+              strong: true,
+              sort: by.number((row) => row.salesTotal),
+              cell: (row) => format.money(row.salesTotal),
+            },
+            {
+              key: 'paid',
+              label: 'Paid to you',
+              numeric: true,
+              sort: by.number((row) => row.paymentsTotal),
+              cell: (row) =>
+                row.paymentsTotal
+                  ? span({ class: 'money--paid', text: format.money(row.paymentsTotal) })
+                  : span({ class: 'table__sub', text: '—' }),
+            },
+          ],
+        }).node
       : null;
 
   const body = div({}, [
     chips,
     custom,
     totals,
-    section('What sold', productRows),
-    section('Who bought', customerRows),
-    dayRows ? section('Day by day', dayRows) : null,
+    section('What sold', productTable),
+    section('Who bought', customerTable),
+    dayTable ? section('Day by day', dayTable) : null,
   ]);
 
   return {
@@ -186,4 +241,12 @@ function section(title, content) {
   return node;
 }
 
-const share = (part, whole) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
+/** A percentage with a proportional bar behind it: rank is read, not counted. */
+function shareBar(part, whole) {
+  const percent = whole > 0 ? Math.round((part / whole) * 100) : 0;
+
+  return div({ class: 'share' }, [
+    div({ class: 'share__track' }, div({ class: 'share__fill', style: { width: `${percent}%` } })),
+    span({ class: 'share__value tnum', text: `${percent}%` }),
+  ]);
+}

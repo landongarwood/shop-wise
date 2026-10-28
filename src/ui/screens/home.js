@@ -29,12 +29,6 @@ export async function home(ctx) {
       screen: 'sell',
     },
     {
-      label: 'Add stock',
-      hint: 'A delivery came in',
-      iconName: 'stock',
-      screen: 'stock-in',
-    },
-    {
       label: 'Take payment',
       hint: 'A customer paid you',
       iconName: 'money',
@@ -70,7 +64,7 @@ export async function home(ctx) {
       div({
         class: 'tile__hint',
         text: overview.counts.products
-          ? `${overview.counts.products} ${plural(overview.counts.products, 'product')} · what is left`
+          ? `${overview.counts.products} ${plural(overview.counts.products, 'product')} · check and top up`
           : 'Add your first product',
       }),
     ]),
