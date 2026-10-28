@@ -17,7 +17,7 @@ import { badge } from '../widgets/states.js';
  * asked for.
  */
 export async function home(ctx) {
-  const { api, format, go, settings } = ctx;
+  const { api, format, go, product } = ctx;
   const overview = await api.get('/overview');
 
   const actions = [
@@ -78,7 +78,7 @@ export async function home(ctx) {
   const body = div({}, [tiles, lookups, lowStockSection(overview, ctx)]);
 
   return {
-    title: settings.shopName || 'ShopWise',
+    title: product,
     subtitle: new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date()),
     actions: [
       {

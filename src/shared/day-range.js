@@ -100,4 +100,4 @@ const addDays = (date, days) =>
 const contains = (range, iso) =>
   (!range.fromIso || iso >= range.fromIso) && (!range.toIso || iso <= range.toIso);
 
-module.exports = { resolve, contains, parseDay, PRESETS: ['today', 'yesterday', 'week', 'month', 'lastMonth', 'year', 'all'] };
+module.exports = { resolve, contains, parseDay };

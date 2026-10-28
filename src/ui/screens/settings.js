@@ -15,7 +15,6 @@ export async function settings(ctx) {
   const meta = await api.get('/meta');
   const current = meta.settings;
 
-  const shopName = input({ class: 'input', type: 'text', value: current.shopName ?? '', maxLength: 60 });
   const currency = input({ class: 'input', type: 'text', value: current.currency ?? '¥', maxLength: 4 });
   const lowStockAt = input({
     class: 'input tnum',
@@ -37,7 +36,6 @@ export async function settings(ctx) {
 
     try {
       await api.patch('/settings', {
-        shopName: shopName.value.trim() || 'My Shop',
         currency: currency.value.trim() || '¥',
         lowStockAt: Number(lowStockAt.value.trim() || 0),
       });
@@ -55,11 +53,6 @@ export async function settings(ctx) {
 
   const body = div({}, [
     div({ class: 'section' }, [
-      label({ class: 'field' }, [
-        span({ class: 'field__label', text: 'Shop name' }),
-        shopName,
-        div({ class: 'field__hint', text: 'Shown at the top of the home screen.' }),
-      ]),
       label({ class: 'field' }, [
         span({ class: 'field__label', text: 'Currency symbol' }),
         currency,

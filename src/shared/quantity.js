@@ -32,4 +32,4 @@ const normalise = (value) => Number(value.toFixed(MAX_DECIMALS));
 
 const capitalise = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
-module.exports = { parse, normalise, MAX_DECIMALS };
+module.exports = { parse, normalise };

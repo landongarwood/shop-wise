@@ -270,4 +270,4 @@ export async function openEditProductSheet({ api, product, format }) {
   });
 }
 
-export { field, suggestions, UNIT_SUGGESTIONS };
+export { field };

@@ -19,7 +19,6 @@ const COLLECTIONS = Object.freeze({
 });
 
 const DEFAULT_SETTINGS = Object.freeze({
-  shopName: 'My Shop',
   currency: '¥',
   lowStockAt: 5,
 });

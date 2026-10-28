@@ -30,7 +30,7 @@ export function currentTheme() {
   return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
 }
 
-export function applyTheme(theme) {
+function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
 }
 

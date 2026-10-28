@@ -160,4 +160,4 @@ const statusOf = (balance) => (balance > 0 ? STATUS.owes : balance < 0 ? STATUS.
 const byNewest = (a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0);
 const byOldest = (a, b) => (a.at > b.at ? 1 : a.at < b.at ? -1 : 0);
 
-module.exports = { LedgerService, STATUS };
+module.exports = { LedgerService };

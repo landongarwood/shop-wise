@@ -4,17 +4,20 @@ import { toastOk, toastWarn } from '../core/toast.js';
 import { openCustomerPicker, productList } from '../widgets/pickers.js';
 import { openNewProductSheet, openSaleLineSheet } from '../widgets/forms.js';
 import { emptyState } from '../widgets/states.js';
+import { createSteps } from '../widgets/steps.js';
 
 /**
- * Recording a sale.
+ * Recording a sale, as three numbered steps.
  *
- * Who, then what, then save — in that order, on one screen, with the running
- * total always visible. Nothing is written until the one big button at the
- * bottom is pressed, so a half-finished sale can be abandoned by going back.
+ * Who, then what, then check and save. The numbering is not decoration: this
+ * screen is used by people who do not use computers much, and a page of
+ * controls with no stated order is where they stop. Each step is a panel of its
+ * own, the one to do next is outlined, and a finished one is ticked — so the
+ * answer to "what now?" is always visible without reading anything.
  *
- * Each product tap asks the only two questions that vary: how many, and at what
- * price today. The price is pre-filled with the usual one, which is the answer
- * most of the time.
+ * Nothing is written until the button in step three, so a half-finished sale is
+ * abandoned by going back. Each product tap asks only the two things that vary:
+ * how many, and at what price today, pre-filled with the usual price.
  */
 export async function sell(ctx) {
   const { api, format, back, params, setSubtitle } = ctx;
@@ -24,26 +27,50 @@ export async function sell(ctx) {
   let customer = params.customer ?? null;
   const lines = [];
 
-  const customerSlot = div({ class: 'section' });
-  const cartSlot = div({ class: 'cart' });
+  const steps = createSteps([
+    { key: 'who', title: 'Who is buying?', hint: 'Pick who is buying' },
+    { key: 'what', title: 'What are they taking?', hint: 'Tap each product' },
+    { key: 'save', title: 'Check and save', hint: 'Nothing to save yet' },
+  ]);
+
+  const customerSlot = steps.body('who');
+  const cartSlot = steps.body('save');
   let picker = null;
 
-  /* ---------- customer ---------- */
+  const refreshSteps = () => {
+    steps.set('who', customer ? 'done' : 'active', customer ? `${customer.name} is buying` : 'Pick who is buying');
+
+    steps.set(
+      'what',
+      !customer ? 'waiting' : lines.length ? 'done' : 'active',
+      lines.length
+        ? `${lines.length} ${lines.length === 1 ? 'item' : 'items'} added`
+        : 'Tap each product they are taking'
+    );
+
+    steps.set(
+      'save',
+      customer && lines.length ? 'active' : 'waiting',
+      customer && lines.length ? 'Check it over, then save' : 'Nothing to save yet'
+    );
+  };
+
+  /* ---------- step 1: who ---------- */
 
   const chooseCustomer = async () => {
     const chosen = await openCustomerPicker({ api, format });
-    if (chosen) {
-      customer = chosen;
-      drawCustomer();
-      drawCart();
-      // The next thing to do is find a product, so put the cursor there.
-      picker?.focusSearch();
-    }
+    if (!chosen) return;
+
+    customer = chosen;
+    drawCustomer();
+    drawCart();
+    // The next thing to do is find a product, so put the cursor there.
+    picker?.focusSearch();
   };
 
   function drawCustomer() {
     clear(customerSlot);
-    setSubtitle(customer ? customer.name : 'Choose a customer, then tap products');
+    setSubtitle(customer ? customer.name : 'Step 1 of 3');
 
     if (!customer) {
       append(
@@ -53,6 +80,7 @@ export async function sell(ctx) {
           'Choose customer',
         ])
       );
+      refreshSteps();
       return;
     }
 
@@ -60,26 +88,21 @@ export async function sell(ctx) {
 
     append(
       customerSlot,
-      div({ class: 'rows' }, [
-        div({ class: 'row row--static' }, [
-          div({ class: 'row__main' }, [
-            div({ class: 'row__title', text: customer.name }),
-            div({ class: 'row__sub', text: `Before this sale: ${position.text}` }),
-          ]),
-          button({ class: 'button button--quiet', text: 'Change', onclick: chooseCustomer }),
+      div({ class: 'chosen' }, [
+        div({ class: 'grow' }, [
+          div({ class: 'chosen__name', text: customer.name }),
+          div({ class: 'chosen__note', text: `Before this sale: ${position.text}` }),
         ]),
+        button({ class: 'button', text: 'Change', onclick: chooseCustomer }),
       ])
     );
+    refreshSteps();
   }
 
-  /* ---------- lines ---------- */
+  /* ---------- step 2: what ---------- */
 
   const addLine = async (product) => {
-    const result = await openSaleLineSheet({
-      product,
-      format,
-      onHand: product.onHand,
-    });
+    const result = await openSaleLineSheet({ product, format, onHand: product.onHand });
     if (!result) return;
 
     lines.push({
@@ -113,24 +136,30 @@ export async function sell(ctx) {
     drawCart();
   };
 
+  /* ---------- step 3: check and save ---------- */
+
   const total = () => lines.reduce((sum, line) => sum + Math.round(line.unitPrice * line.quantity), 0);
 
   function drawCart() {
     clear(cartSlot);
+    refreshSteps();
 
     if (!lines.length) {
       append(
         cartSlot,
-        div({ class: 'faint', style: { textAlign: 'center' }, text: 'Tap a product above to start the sale.' })
+        div({ class: 'step__empty' }, [
+          div({ text: 'Nothing added yet.' }),
+          div({ class: 'faint', text: 'Pick products in step 2 and they will appear here.' }),
+        ])
       );
       return;
     }
 
     const rows = div(
-      { class: 'rows', style: { marginBottom: 'var(--space-3)' } },
+      { class: 'rows' },
       lines.map((line, index) =>
         div({ class: 'row row--static' }, [
-          button({ class: 'row__main', style: { border: 0, background: 'transparent', cursor: 'pointer', textAlign: 'left' }, onclick: () => editLine(index) }, [
+          button({ class: 'line-edit', onclick: () => editLine(index) }, [
             div({ class: 'row__title', text: line.name }),
             div({
               class: 'row__sub tnum',
@@ -140,8 +169,13 @@ export async function sell(ctx) {
               ),
             }),
           ]),
-          div({ class: 'row__end' }, div({ class: 'row__amount tnum', text: format.money(Math.round(line.unitPrice * line.quantity)) })),
-          button({ class: 'icon-button', ariaLabel: `Remove ${line.name}`, onclick: () => removeLine(index) }, icon('trash', { size: 18 })),
+          div(
+            { class: 'row__end' },
+            div({ class: 'row__amount tnum', text: format.money(Math.round(line.unitPrice * line.quantity)) })
+          ),
+          button({ class: 'icon-button', ariaLabel: `Remove ${line.name}`, onclick: () => removeLine(index) },
+            icon('trash', { size: 18 })
+          ),
         ])
       )
     );
@@ -164,8 +198,6 @@ export async function sell(ctx) {
       saveButton,
     ]);
   }
-
-  /* ---------- saving ---------- */
 
   async function save(saveButton) {
     if (!customer || !lines.length) return;
@@ -218,21 +250,14 @@ export async function sell(ctx) {
     },
   });
 
+  append(steps.body('what'), picker.node);
+
   drawCustomer();
   drawCart();
 
-  const body = div({}, [
-    customerSlot,
-    div({ class: 'section' }, [
-      div({ class: 'section__head' }, div({ class: 'section__title', text: 'What did they take?' })),
-      picker.node,
-    ]),
-    cartSlot,
-  ]);
-
   return {
     title: 'New sale',
-    subtitle: customer ? customer.name : 'Choose a customer, then tap products',
-    body,
+    subtitle: customer ? customer.name : 'Step 1 of 3',
+    body: steps.node,
   };
 }

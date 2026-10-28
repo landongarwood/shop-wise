@@ -24,7 +24,6 @@ describe('the stored document', () => {
 
     assert.equal(document.settings.currency, '¥');
     assert.equal(document.settings.currency.codePointAt(0), 0xa5, 'the yen/yuan sign, not a mangled byte');
-    assert.equal(document.settings.shopName, 'My Shop');
     assert.equal(document.settings.lowStockAt, 5);
     assert.equal(document.schemaVersion, SCHEMA_VERSION);
 
@@ -45,10 +44,10 @@ describe('the stored document', () => {
   });
 
   test('a file from an older version gains what it is missing', () => {
-    const old = { settings: { shopName: 'Corner Cafe' }, products: [{ id: 'p1' }] };
+    const old = { settings: { lowStockAt: 12 }, products: [{ id: 'p1' }] };
     const migrated = migrate(old);
 
-    assert.equal(migrated.settings.shopName, 'Corner Cafe', 'what was set is kept');
+    assert.equal(migrated.settings.lowStockAt, 12, 'what was set is kept');
     assert.equal(migrated.settings.currency, '¥', 'what was missing is filled in');
     assert.deepEqual(migrated.products, [{ id: 'p1' }], 'records are left alone');
     assert.deepEqual(migrated.payments, [], 'a collection added later arrives empty');

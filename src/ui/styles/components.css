@@ -891,15 +891,124 @@
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-/* ---------- running sale ---------- */
+/* ---------- steps ---------- */
 
-.cart {
-  position: sticky;
-  bottom: 0;
-  margin-top: clamp(16px, 1.8vw, 24px);
-  padding-top: var(--space-4);
-  background: linear-gradient(to bottom, transparent, var(--bg) 36%);
+/*
+ * A task broken into numbered panels, for the screens a novice meets first.
+ *
+ * The step to do next is outlined and the finished ones are ticked, so "what
+ * now?" is answered by looking rather than by reading. A page of controls with
+ * no stated order is where someone who does not use computers much stops.
+ */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 1.4vw, 18px);
 }
+
+.step {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* The one to do next. */
+.step--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.step__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) clamp(14px, 1.6vw, 20px);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.step__number {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  color: var(--text-soft);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.step--active .step__number {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.step--done .step__number {
+  background: var(--paid);
+  color: var(--surface);
+}
+
+.step__title {
+  font-family: var(--font-display);
+  font-size: clamp(16px, 0.7vw + 14px, 19px);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.step__hint {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.step__body {
+  padding: clamp(14px, 1.6vw, 20px);
+}
+
+.step__empty {
+  padding: var(--space-5) 0;
+  text-align: center;
+  color: var(--text-soft);
+}
+
+/* The chosen customer, once step one is answered. */
+.chosen {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--paid-soft);
+}
+
+.chosen__name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.chosen__note {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+/* A sale line, tappable to correct the quantity or the price. */
+.line-edit {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* ---------- running sale ---------- */
 
 .cart__total {
   display: flex;

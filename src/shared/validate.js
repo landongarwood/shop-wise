@@ -28,9 +28,17 @@ function instant(input, field = 'date') {
 
   if (typeof input === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input)) {
     const [year, month, day] = input.split('-').map(Number);
+
     // Noon local time: the day a sale belongs to never shifts under a timezone
     // or daylight-saving change.
-    return new Date(year, month - 1, day, 12, 0, 0).toISOString();
+    const date = new Date(year, month - 1, day, 12, 0, 0);
+
+    // Date happily rolls 2026-13-45 forward into 2027. Reading the parts back
+    // is what catches a day that does not exist.
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      throw badRequest(`${capitalise(field)} is not a real date.`);
+    }
+    return date.toISOString();
   }
 
   const date = new Date(input);
@@ -46,6 +54,12 @@ function array(input, field, { min = 1 } = {}) {
 }
 
 function integer(input, field, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
+  // Number('') and Number(null) are both 0, which would quietly turn a missing
+  // value into a real one.
+  if (input === null || input === undefined || input === '') {
+    throw badRequest(`${capitalise(field)} must be a whole number.`);
+  }
+
   const value = Number(input);
   if (!Number.isInteger(value)) throw badRequest(`${capitalise(field)} must be a whole number.`);
   if (value < min || value > max) throw badRequest(`${capitalise(field)} must be between ${min} and ${max}.`);

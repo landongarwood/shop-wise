@@ -18,7 +18,7 @@ const ICONS = { ok: 'check', warn: 'alert', error: 'alert' };
 const DURATIONS = { ok: 3200, warn: 8000, error: 10000 };
 const MAX_VISIBLE = 4;
 
-export function showToast(message, { kind = 'ok', duration } = {}) {
+function showToast(message, { kind = 'ok', duration } = {}) {
   const root = document.getElementById('toast-root');
   if (!root) return () => {};
 

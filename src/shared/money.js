@@ -49,8 +49,7 @@ function requireMinor(input, field = 'amount') {
 
 const multiply = (minor, quantity) => Math.round(minor * quantity);
 const sum = (values) => values.reduce((total, value) => total + value, 0);
-const toMajor = (minor) => minor / MINOR_PER_MAJOR;
 
 const capitalise = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
-module.exports = { parseMinor, requireMinor, multiply, sum, toMajor, MINOR_PER_MAJOR, DECIMALS };
+module.exports = { parseMinor, requireMinor, multiply, sum, DECIMALS };

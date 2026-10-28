@@ -86,10 +86,34 @@ describe('stock', () => {
     assert.equal(sale.quantity, 3);
     assert.equal(sale.who, 'Alice', 'a sale says who took it');
     assert.equal(sale.lineTotal, 3600);
+    assert.equal(sale.saleItemCount, 1, 'and what else removing it would take');
+    assert.equal(sale.saleTotal, 3600);
 
     const delivery = entries.find((movement) => movement.kind === 'in');
     assert.equal(delivery.quantity, 20);
     assert.equal(delivery.who, '', 'a delivery has no customer');
+  });
+
+  test('a sale line knows the rest of the sale it belongs to', async () => {
+    const { services, coffee, cups, alice } = await createShop();
+
+    await services.sales.record({
+      customerId: alice.id,
+      items: [
+        { productId: coffee.id, quantity: 1 },
+        { productId: cups.id, quantity: 10 },
+      ],
+    });
+
+    const line = services.inventory
+      .movementsFor(coffee.id)
+      .entries.find((movement) => movement.kind === 'sold');
+
+    // Deleting it would take the cups with it, and drop the balance by both.
+    assert.equal(line.saleItemCount, 2);
+    assert.equal(line.saleTotal, 1200 + 150);
+    assert.equal(line.lineTotal, 1200);
+    assert.equal(line.customerId, alice.id);
   });
 
   test('hands back one page of history at a time, and says how much there is', async () => {

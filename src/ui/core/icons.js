@@ -54,5 +54,3 @@ export function icon(name, { size = 22, strokeWidth = 1.9, className = '' } = {}
   svg.innerHTML = shape;
   return svg;
 }
-
-export const iconNames = Object.keys(SHAPES);

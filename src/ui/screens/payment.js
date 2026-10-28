@@ -2,25 +2,34 @@ import { div, button, input, label, span, append, clear } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { toastOk } from '../core/toast.js';
 import { openCustomerPicker } from '../widgets/pickers.js';
+import { createSteps } from '../widgets/steps.js';
 
 /**
- * Recording money received.
+ * Recording money received, as three numbered steps.
  *
- * Customers here settle up whenever they like, in whatever amount they like, so
- * this screen asks only three things: who paid, how much, and when. It is never
- * tied to a particular sale, because the shop does not work that way — the
- * payment simply reduces what that customer owes.
+ * Who paid, how much, and when — in that order, each in its own panel, with the
+ * step to do next outlined and the answered ones ticked. Same shape as the sell
+ * screen, so there is one thing to learn rather than two.
  *
- * Paying more than the balance is allowed and becomes credit, which is what
- * happens in practice when someone rounds up or pays in advance.
+ * Customers here settle up whenever they like, in whatever amount they like. A
+ * payment is never tied to a particular sale, because the shop does not work
+ * that way: it simply reduces what that customer owes. Paying more than the
+ * balance is allowed and becomes credit, which is what happens in practice when
+ * someone rounds up or pays in advance.
  */
 export async function payment(ctx) {
   const { api, format, back, params, setSubtitle } = ctx;
 
   let customer = params.customer ?? null;
 
-  const customerSlot = div({ class: 'section' });
-  const owedSlot = div({ class: 'section' });
+  const steps = createSteps([
+    { key: 'who', title: 'Who is paying?', hint: 'Pick who handed over the money' },
+    { key: 'amount', title: 'How much?', hint: 'Enter the amount' },
+    { key: 'save', title: 'When, and save', hint: 'Not ready yet' },
+  ]);
+
+  const customerSlot = steps.body('who');
+  const owedSlot = div({});
 
   const amount = input({
     class: 'input input--amount tnum',
@@ -30,13 +39,7 @@ export async function payment(ctx) {
     ariaLabel: 'Amount paid',
   });
 
-  const when = input({
-    class: 'input',
-    type: 'date',
-    value: format.dateInput(),
-    ariaLabel: 'Date paid',
-  });
-
+  const when = input({ class: 'input', type: 'date', value: format.dateInput(), ariaLabel: 'Date paid' });
   const note = input({ class: 'input', type: 'text', placeholder: 'e.g. cash, bank transfer' });
 
   const problem = div({ class: 'field__hint', style: { color: 'var(--debt)' } });
@@ -46,20 +49,48 @@ export async function payment(ctx) {
     'Save payment',
   ]);
 
-  /* ---------- customer ---------- */
+  const typedAmount = () => Number(amount.value.trim().replace(',', '.'));
+  const hasAmount = () => amount.value.trim() !== '' && typedAmount() > 0;
+
+  const refreshSteps = () => {
+    steps.set('who', customer ? 'done' : 'active', customer ? `${customer.name} is paying` : 'Pick who is paying');
+
+    steps.set(
+      'amount',
+      !customer ? 'waiting' : hasAmount() ? 'done' : 'active',
+      !customer
+        ? 'Choose someone first'
+        : hasAmount()
+          ? `${format.money(Math.round(typedAmount() * 100))} received`
+          : 'Enter how much they handed over'
+    );
+
+    steps.set(
+      'save',
+      customer && hasAmount() ? 'active' : 'waiting',
+      customer && hasAmount() ? 'Check the date, then save' : 'Not ready yet'
+    );
+
+    saveButton.disabled = !customer;
+  };
+
+  amount.addEventListener('input', refreshSteps);
+
+  /* ---------- step 1: who ---------- */
 
   const chooseCustomer = async () => {
     const chosen = await openCustomerPicker({ api, format, title: 'Who paid?' });
-    if (chosen) {
-      customer = chosen;
-      drawCustomer();
-    }
+    if (!chosen) return;
+
+    customer = chosen;
+    drawCustomer();
+    amount.focus();
   };
 
   function drawCustomer() {
     clear(customerSlot);
     clear(owedSlot);
-    setSubtitle(customer ? customer.name : 'Who paid you?');
+    setSubtitle(customer ? customer.name : 'Step 1 of 3');
 
     if (!customer) {
       append(
@@ -69,52 +100,46 @@ export async function payment(ctx) {
           'Choose customer',
         ])
       );
-      saveButton.disabled = true;
+      refreshSteps();
       return;
     }
-
-    saveButton.disabled = false;
 
     const position = format.balance(customer.balance ?? 0);
 
     append(
       customerSlot,
-      div({ class: 'rows' }, [
-        div({ class: 'row row--static' }, [
-          div({ class: 'row__main' }, [
-            div({ class: 'row__title', text: customer.name }),
-            div({ class: 'row__sub', text: position.text }),
-          ]),
-          button({ class: 'button button--quiet', text: 'Change', onclick: chooseCustomer }),
+      div({ class: 'chosen' }, [
+        div({ class: 'grow' }, [
+          div({ class: 'chosen__name', text: customer.name }),
+          div({ class: 'chosen__note', text: position.text }),
         ]),
+        button({ class: 'button', text: 'Change', onclick: chooseCustomer }),
       ])
     );
 
-    // The amount they owe is overwhelmingly the amount they are paying, so it
-    // is one tap away rather than something to read off and retype.
+    // What they owe is overwhelmingly what they are paying, so it is one tap
+    // away rather than something to read off and retype.
     if ((customer.balance ?? 0) > 0) {
+      const fill = (minor) => {
+        amount.value = format.moneyInput(minor);
+        amount.focus();
+        refreshSteps();
+      };
+
       append(
         owedSlot,
-        div({ class: 'chips' }, [
-          button({
-            class: 'chip',
-            text: `Pay all — ${format.money(customer.balance)}`,
-            onclick: () => {
-              amount.value = format.moneyInput(customer.balance);
-              amount.focus();
-            },
-          }),
+        div({ class: 'chips', style: { marginBottom: 'var(--space-3)' } }, [
+          button({ class: 'chip', text: `Pay all — ${format.money(customer.balance)}`, onclick: () => fill(customer.balance) }),
           button({
             class: 'chip',
             text: `Half — ${format.money(Math.round(customer.balance / 2))}`,
-            onclick: () => {
-              amount.value = format.moneyInput(Math.round(customer.balance / 2));
-              amount.focus();
-            },
+            onclick: () => fill(Math.round(customer.balance / 2)),
           }),
         ])
       );
     }
+
+    refreshSteps();
   }
 
   /* ---------- saving ---------- */
@@ -124,8 +149,8 @@ export async function payment(ctx) {
 
     if (!customer) return chooseCustomer();
 
-    const text = amount.value.trim();
-    if (!text || !(Number(text.replace(',', '.')) > 0)) {
+    const text = amount.value.trim().replace(',', '.');
+    if (!text || !(Number(text) > 0)) {
       problem.textContent = 'Enter how much they paid, like 20.00';
       amount.focus();
       return undefined;
@@ -135,12 +160,12 @@ export async function payment(ctx) {
     try {
       await api.post('/payments', {
         customerId: customer.id,
-        amount: text.replace(',', '.'),
+        amount: text,
         at: when.value,
         note: note.value.trim(),
       });
 
-      const paid = Math.round(Number(text.replace(',', '.')) * 100);
+      const paid = Math.round(Number(text) * 100);
       const left = (customer.balance ?? 0) - paid;
 
       toastOk(
@@ -159,20 +184,24 @@ export async function payment(ctx) {
     }
   });
 
-  drawCustomer();
+  /* ---------- assembly ---------- */
 
-  const body = div({}, [
-    customerSlot,
+  append(steps.body('amount'), [
     owedSlot,
-    label({ class: 'field' }, [span({ class: 'field__label', text: 'How much did they pay?' }), amount, problem]),
-    label({ class: 'field' }, [span({ class: 'field__label', text: 'When?' }), when]),
+    label({ class: 'field' }, [span({ class: 'field__label', text: 'Amount received' }), amount, problem]),
+  ]);
+
+  append(steps.body('save'), [
+    label({ class: 'field' }, [span({ class: 'field__label', text: 'When was it paid?' }), when]),
     label({ class: 'field' }, [span({ class: 'field__label', text: 'Note (optional)' }), note]),
     saveButton,
   ]);
 
+  drawCustomer();
+
   return {
     title: 'Take payment',
-    subtitle: customer ? customer.name : 'Who paid you?',
-    body,
+    subtitle: customer ? customer.name : 'Step 1 of 3',
+    body: steps.node,
   };
 }

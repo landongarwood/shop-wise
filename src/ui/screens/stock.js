@@ -275,6 +275,36 @@ async function openProductSheet(product, ctx) {
   };
 
   /*
+   * Deleting a sale reaches further than the row it is on: the whole sale goes,
+   * including any other product on it, and the customer's balance drops by the
+   * full total. Both consequences are spelled out, because neither is visible
+   * from here.
+   */
+  const removeSale = async (movement) => {
+    const alsoOnThisSale = movement.saleItemCount - 1;
+
+    const consequences = [
+      `${format.quantity(movement.quantity)} ${product.unit ?? ''} goes back into stock.`.replace('  ', ' '),
+      alsoOnThisSale > 0
+        ? `This sale also covered ${alsoOnThisSale} other ${alsoOnThisSale === 1 ? 'product' : 'products'}, and all of it is removed.`
+        : null,
+      `${movement.who} will owe ${format.money(movement.saleTotal)} less.`,
+    ].filter(Boolean);
+
+    const confirmed = await confirmSheet({
+      title: 'Delete this sale?',
+      message: consequences.join(' '),
+      confirmLabel: 'Delete the sale',
+    });
+    if (!confirmed) return;
+
+    await api.delete(`/sales/${movement.id}`);
+    closeSheet(null);
+    toastOk(`Sale deleted — ${movement.who} owes ${format.money(movement.saleTotal)} less`);
+    await reload();
+  };
+
+  /*
    * In and out on one timeline. Stock only means anything as the difference
    * between the two, so a list of deliveries alone invites "sold to whom?" and
    * then cannot answer it.
@@ -321,15 +351,20 @@ async function openProductSheet(product, ctx) {
         key: 'remove',
         label: '',
         width: '1%',
-        // Only a delivery can be taken back from here. A sale is undone from the
-        // customer it belongs to, where its other half lives.
         cell: (movement) =>
           movement.kind === 'in'
             ? button(
                 { class: 'icon-button', ariaLabel: 'Remove this delivery', onclick: () => removeDelivery(movement) },
                 icon('trash', { size: 16 })
               )
-            : '',
+            : button(
+                {
+                  class: 'icon-button',
+                  ariaLabel: `Delete the sale to ${movement.who}`,
+                  onclick: () => removeSale(movement),
+                },
+                icon('trash', { size: 16 })
+              ),
       },
     ],
   });

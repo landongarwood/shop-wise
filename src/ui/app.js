@@ -18,8 +18,11 @@ async function boot() {
 
   const api = new ApiClient();
 
+  const meta = await api.get('/meta');
+
   const app = {
     api,
+    product: meta.product,
     settings: null,
     format: null,
 

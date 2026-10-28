@@ -2,7 +2,7 @@
 
 const validate = require('../shared/validate');
 
-/** Shop name, currency symbol and the level at which stock counts as low. */
+/** The currency symbol and the level at which stock counts as low. */
 class SettingsService {
   constructor({ store, clock }) {
     this.store = store;
@@ -16,9 +16,6 @@ class SettingsService {
   async update(input) {
     const changes = {};
 
-    if (input?.shopName !== undefined) {
-      changes.shopName = validate.text(input.shopName, 'shop name', { max: 60 });
-    }
     if (input?.currency !== undefined) {
       changes.currency = validate.text(input.currency, 'currency symbol', { max: 4 });
     }

@@ -182,7 +182,7 @@ async function seed(services) {
   await services.inventory.addStock({ productId: coffee.id, quantity: 20 });
   // The currency is pinned here rather than inherited: these checks read
   // amounts literally, and changing the shop's default should not break them.
-  await services.settings.update({ shopName: 'Corner Cafe', currency: '$' });
+  await services.settings.update({ currency: '$' });
 
   return { coffee, alice };
 }
@@ -201,7 +201,7 @@ async function main() {
   await page.installHelpers();
 
   let text = await page.text();
-  check('home shows the shop name', text.includes('Corner Cafe'), text.slice(0, 160));
+  check('home is headed by the app name', text.includes('ShopWise'), text.slice(0, 160));
 
   /* ---------------- sell ---------------- */
 

@@ -91,9 +91,13 @@ class InventoryService {
           at: sale.at,
           quantity: item.quantity,
           who: sale.customerName,
+          customerId: sale.customerId,
           note: sale.note ?? '',
           unitPrice: item.unitPrice,
           lineTotal: item.lineTotal,
+          // What removing this row would really take with it.
+          saleItemCount: sale.items.length,
+          saleTotal: sale.total,
         }))
     );
 
