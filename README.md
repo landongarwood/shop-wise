@@ -249,3 +249,4 @@ never touches the installed copy's data. Override with `--data-dir=<path>`.
 
   A clean clone on a stock Windows 11 machine with only Node 22: `npm install`
   (nothing to install), `npm test`, `npm run tools:wix`, `npm run msi`.
+"# shop-wise" 
