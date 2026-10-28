@@ -16,11 +16,13 @@ const MAX_BODY_BYTES = 1024 * 1024;
  * by any site the user happens to have open in a browser.
  */
 class HttpServer {
-  constructor({ router, staticFiles, sessionToken, logger, devChannel = null, host = '127.0.0.1', port = 0 }) {
+  constructor({ router, staticFiles, sessionToken, logger, channels = [], host = '127.0.0.1', port = 0 }) {
     this.router = router;
     this.staticFiles = staticFiles;
     this.sessionToken = sessionToken;
-    this.devChannel = devChannel;
+    // Event-stream endpoints that live outside /api: presence always, live
+    // reload only in development. See http/event-stream.js for why.
+    this.channels = channels.filter(Boolean);
     this.logger = logger;
     this.host = host;
     this.port = port;
@@ -43,6 +45,9 @@ class HttpServer {
   }
 
   close() {
+    // An open event stream would hold its socket, and close() waits for every
+    // connection to end, so the streams have to be let go of first.
+    for (const channel of this.channels) channel.closeAll();
     return new Promise((resolve) => this.server.close(resolve));
   }
 
@@ -60,9 +65,8 @@ class HttpServer {
     const url = new URL(request.url, `http://${this.host}`);
     const pathname = decodeURIComponent(url.pathname);
 
-    // Only ever set in dev; see http/dev-reload.js for why it sits outside /api.
-    if (this.devChannel?.handles(pathname)) {
-      return this.devChannel.stream(request, response);
+    for (const channel of this.channels) {
+      if (channel.handles(pathname)) return channel.stream(request, response);
     }
 
     if (!pathname.startsWith('/api/')) {

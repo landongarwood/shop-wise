@@ -74,8 +74,12 @@ async function openWindow(url) {
   }
 
   // A dedicated profile directory keeps the app out of the user's real Edge
-  // profile and guarantees Edge starts its own process instead of handing the
-  // window to an already-running Edge and exiting immediately.
+  // profile, and keeps the shop's window out of the user's browsing session.
+  //
+  // It does not keep the process alive: Edge moves the window to a browser
+  // process of its own and lets this one exit, whatever profile it is given.
+  // Nothing here should be read as a signal about the window — the app asks
+  // the page instead. See platform/lifetime.js.
   const profileDir = path.join(config.dataDir, 'window');
   fs.mkdirSync(profileDir, { recursive: true });
 

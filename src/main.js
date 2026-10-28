@@ -6,6 +6,7 @@ const config = require('./config');
 const log = require('./log');
 const { createContainer } = require('./container');
 const { openWindow } = require('./platform/window');
+const { WindowLifetime } = require('./platform/lifetime');
 
 async function main() {
   fs.mkdirSync(config.dataDir, { recursive: true });
@@ -13,7 +14,7 @@ async function main() {
   log.info(`${config.productName} ${config.version} starting`);
   log.info(`data directory: ${config.dataDir}`);
 
-  const { server } = createContainer();
+  const { server, presence } = createContainer();
   await server.listen();
   log.info(`listening on ${server.url}`);
 
@@ -24,13 +25,24 @@ async function main() {
 
   const window = await openWindow(server.url);
 
+  // Not a shutdown signal: Edge hands the window to a browser process of its
+  // own and lets this one go. Whether anyone is still looking is the page's
+  // answer to give — see platform/lifetime.js.
+  window.on('exit', () => log.info('browser launcher exited; the window may well still be open'));
+
   // The window owns the lifetime of the app: close it and the server goes too.
-  window.on('exit', () => {
-    log.info('window closed, shutting down');
-    server.close().then(() => process.exit(0));
-    // Don't let a lingering keep-alive socket hold the process open.
-    setTimeout(() => process.exit(0), 2000).unref();
-  });
+  new WindowLifetime({
+    presence,
+    logger: log,
+    onGone: (reason) => shutDown(server, reason),
+  }).start();
+}
+
+function shutDown(server, reason) {
+  log.info(`${reason}, shutting down`);
+  server.close().then(() => process.exit(0));
+  // Don't let a lingering keep-alive socket hold the process open.
+  setTimeout(() => process.exit(0), 2000).unref();
 }
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

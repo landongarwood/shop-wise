@@ -28,6 +28,7 @@ const { StaticFileHandler } = require('./http/static-files');
 const { SessionToken } = require('./http/session-token');
 const { HttpServer } = require('./http/server');
 const { DevReloadChannel } = require('./http/dev-reload');
+const { PresenceChannel } = require('./http/presence');
 
 /**
  * The composition root: the one place that knows which concrete thing fills
@@ -135,6 +136,9 @@ function createContainer({
   // never opens the endpoint at all.
   const devChannel = config.dev ? new DevReloadChannel({ logger }) : null;
 
+  // Presence is always on: it is how the app knows the window is still there.
+  const presence = new PresenceChannel({ logger });
+
   const server = new HttpServer({
     router: registerRoutes(new Router(), services),
     staticFiles: new StaticFileHandler({
@@ -147,13 +151,25 @@ function createContainer({
       }),
     }),
     sessionToken,
-    devChannel,
+    channels: [presence, devChannel],
     logger,
     host: config.host,
     port: config.port,
   });
 
-  return { config, logger, clock, ids, store: documentStore, repositories, services, sessionToken, devChannel, server };
+  return {
+    config,
+    logger,
+    clock,
+    ids,
+    store: documentStore,
+    repositories,
+    services,
+    sessionToken,
+    presence,
+    devChannel,
+    server,
+  };
 }
 
 const repository = (store, collection, label) => new CollectionRepository({ store, collection, label });

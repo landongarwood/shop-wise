@@ -25,6 +25,14 @@ describe('the HTTP API', () => {
     await container.server.close();
   });
 
+  /** Waits for something the server does a moment after the socket drops. */
+  const until = async (condition, timeoutMs = 2000) => {
+    const deadline = Date.now() + timeoutMs;
+    while (!condition() && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  };
+
   const call = async (method, route, body) => {
     const response = await fetch(`${base}/api${route}`, {
       method,
@@ -131,6 +139,24 @@ describe('the HTTP API', () => {
       body: '{not json',
     });
     assert.equal(response.status, 400);
+  });
+
+  test('the page can say it is open, without a token', async () => {
+    // EventSource cannot send headers, so this endpoint is outside /api. It
+    // carries nothing but the fact that a window is there.
+    const abort = new AbortController();
+    const response = await fetch(`${base}/alive`, { signal: abort.signal });
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-type'), /text\/event-stream/);
+    assert.equal(container.presence.count, 1);
+
+    abort.abort();
+    await until(() => container.presence.count === 0);
+    assert.equal(container.presence.count, 0, 'a window that goes away is not still counted');
+
+    // Leave the stream undrained; the response body is of no interest here.
+    await response.body?.cancel().catch(() => {});
   });
 
   test('the live-reload endpoint does not exist outside dev mode', async () => {
