@@ -71,6 +71,11 @@ export class Navigator {
       back: () => this.back(),
       root: (name, params) => this.root(name, params),
       reload: () => this.reload(),
+      // A task screen's subtitle changes as the task progresses — once a
+      // customer is chosen it should say who, not keep asking.
+      setSubtitle: (value) => {
+        if (this.subtitleNode) this.subtitleNode.textContent = value ?? '';
+      },
     };
 
     let screen;
@@ -92,6 +97,9 @@ export class Navigator {
 
     const canGoBack = this.stack.length > 1;
 
+    // Always present, so setSubtitle has something to write into later.
+    this.subtitleNode = div({ class: 'appbar__subtitle', text: screen.subtitle ?? '' });
+
     append(this.appbar, [
       canGoBack
         ? button(
@@ -102,7 +110,7 @@ export class Navigator {
 
       div({ class: 'appbar__titles' }, [
         h1({ class: 'appbar__title', text: screen.title }),
-        screen.subtitle ? div({ class: 'appbar__subtitle', text: screen.subtitle }) : null,
+        this.subtitleNode,
       ]),
 
       div(

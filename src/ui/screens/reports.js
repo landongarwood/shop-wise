@@ -52,9 +52,9 @@ export async function reports(ctx) {
 
   const custom = div({ class: 'inline', style: { marginBottom: 'var(--space-5)' } }, [
     span({ class: 'faint', text: 'or pick dates' }),
-    div({ class: 'grow' }, from),
+    div({ style: { width: 'min(170px, 38vw)' } }, from),
     span({ class: 'faint', text: 'to' }),
-    div({ class: 'grow' }, to),
+    div({ style: { width: 'min(170px, 38vw)' } }, to),
     button({
       class: 'button',
       text: 'Show',

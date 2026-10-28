@@ -15,7 +15,7 @@ import { openCustomerPicker } from '../widgets/pickers.js';
  * happens in practice when someone rounds up or pays in advance.
  */
 export async function payment(ctx) {
-  const { api, format, back, params } = ctx;
+  const { api, format, back, params, setSubtitle } = ctx;
 
   let customer = params.customer ?? null;
 
@@ -59,6 +59,7 @@ export async function payment(ctx) {
   function drawCustomer() {
     clear(customerSlot);
     clear(owedSlot);
+    setSubtitle(customer ? customer.name : 'Who paid you?');
 
     if (!customer) {
       append(

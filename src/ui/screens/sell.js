@@ -17,7 +17,7 @@ import { emptyState } from '../widgets/states.js';
  * most of the time.
  */
 export async function sell(ctx) {
-  const { api, format, back, params } = ctx;
+  const { api, format, back, params, setSubtitle } = ctx;
 
   const products = await api.get('/stock');
 
@@ -40,6 +40,7 @@ export async function sell(ctx) {
 
   function drawCustomer() {
     clear(customerSlot);
+    setSubtitle(customer ? customer.name : 'Choose a customer, then tap products');
 
     if (!customer) {
       append(

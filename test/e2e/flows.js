@@ -237,12 +237,35 @@ async function main() {
   check('the line reaches the sale at the agreed price', text.includes('$34.50') && text.includes('3 kg'), text.slice(0, 300));
 
   await page.click('.button--confirm', 'Save sale');
+
+  // Read the notification before it expires: top right, green, plain language.
+  const notice = await page.evaluate(`
+    (() => {
+      const node = document.querySelector('.toast');
+      if (!node) return null;
+      const box = node.getBoundingClientRect();
+      return {
+        text: node.innerText,
+        background: getComputedStyle(node).backgroundColor,
+        fromRight: Math.round(window.innerWidth - box.right),
+        fromTop: Math.round(box.top),
+      };
+    })()
+  `);
+  check('a notification confirms the sale', Boolean(notice) && notice.text.includes('Sale saved'), JSON.stringify(notice));
+  check('the notification sits in the top right', notice && notice.fromTop < 160 && notice.fromRight < 90, JSON.stringify(notice));
+  check('the notification is green, not black', notice && notice.background === 'rgb(11, 122, 75)', notice?.background);
+
   await wait(400);
   await page.installHelpers();
 
   text = await page.text();
   check('saving returns home', text.includes('Add stock'));
-  check('home reflects the sale straight away', text.includes('$34.50'), text.slice(0, 300));
+
+  // Scoped to the screen, since the confirmation notification is still on top
+  // of it and does quote the amount.
+  const homeBody = await page.evaluate(`document.getElementById('screen').innerText.replace(/\s+/g, ' ').trim()`);
+  check('home carries no figures of its own', !homeBody.includes('$'), homeBody.slice(0, 300));
 
   /* ---------------- payment ---------------- */
 
@@ -264,7 +287,7 @@ async function main() {
   await page.installHelpers();
 
   text = await page.text();
-  check('the payment shows on the home screen', text.includes('$20.00'), text.slice(0, 300));
+  check('saving the payment returns home', text.includes('Take payment'), text.slice(0, 200));
 
   /* ---------------- customer history ---------------- */
 
@@ -303,7 +326,7 @@ async function main() {
   check('the theme toggle switches to dark', theme === 'dark', `theme is "${theme}"`);
 
   const background = await page.evaluate('getComputedStyle(document.body).backgroundColor');
-  check('the dark theme actually repaints', background === 'rgb(15, 17, 22)', background);
+  check('the dark theme actually repaints', background === 'rgb(14, 16, 21)', background);
 
   /* ---------------- the books agree ---------------- */
 

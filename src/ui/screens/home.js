@@ -1,15 +1,20 @@
 import { div, button, append } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { currentTheme, toggleTheme } from '../core/theme.js';
-import { stat, badge } from '../widgets/states.js';
+import { badge } from '../widgets/states.js';
 
 /**
  * Home.
  *
- * Three things the shopkeeper does — sell, take in stock, take money — and two
- * things they look up: who owes what, and what is on the shelves. Each is one
- * tap from here, as a target far too big to miss. The numbers above them answer
- * "how did today go" without anyone having to open a report.
+ * Three things the shopkeeper does — sell, take in stock, take money — and the
+ * things they look up. Each is one tap from here, as a target far too big to
+ * miss.
+ *
+ * Deliberately no figures at the top: this screen is for getting on with the
+ * job. The takings live on the sales report and the debts on the customer list,
+ * which is where someone goes when they actually want to read a number. The one
+ * exception is stock running out, which has to interrupt rather than wait to be
+ * asked for.
  */
 export async function home(ctx) {
   const { api, format, go, settings } = ctx;
@@ -76,32 +81,7 @@ export async function home(ctx) {
     ]),
   ]);
 
-  const summary = div({ class: 'summary' }, [
-    stat({
-      label: 'Sold today',
-      value: format.money(overview.today.salesTotal),
-      hint: `${overview.today.salesCount} ${plural(overview.today.salesCount, 'sale')}`,
-    }),
-    stat({
-      label: 'Paid to you today',
-      value: format.money(overview.today.paymentsTotal),
-      hint: `${overview.today.paymentsCount} ${plural(overview.today.paymentsCount, 'payment')}`,
-      tone: overview.today.paymentsTotal > 0 ? 'paid' : null,
-    }),
-    stat({
-      label: 'Owed to you',
-      value: format.money(overview.ledger.receivable),
-      hint: overview.ledger.credit > 0 ? `${format.money(overview.ledger.credit)} paid ahead` : 'across all customers',
-      tone: overview.ledger.receivable > 0 ? 'debt' : null,
-    }),
-    stat({
-      label: 'Sold this month',
-      value: format.money(overview.month.salesTotal),
-      hint: `${overview.month.salesCount} ${plural(overview.month.salesCount, 'sale')}`,
-    }),
-  ]);
-
-  const body = div({}, [summary, tiles, lookups, lowStockSection(overview, ctx)]);
+  const body = div({}, [tiles, lookups, lowStockSection(overview, ctx)]);
 
   return {
     title: settings.shopName || 'ShopWise',

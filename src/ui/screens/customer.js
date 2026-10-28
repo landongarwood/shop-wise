@@ -3,6 +3,7 @@ import { icon } from '../core/icons.js';
 import { confirmSheet, openSheet } from '../core/sheet.js';
 import { toastOk } from '../core/toast.js';
 import { field } from '../widgets/forms.js';
+import { stat } from '../widgets/states.js';
 
 /**
  * One customer's account.
@@ -20,15 +21,30 @@ export async function customer(ctx) {
   const person = statement.customer;
   const position = format.balance(statement.balance);
 
-  const headline = div({ class: 'card', style: { marginBottom: 'var(--space-5)' } }, [
-    div({ class: 'stat__label', text: statement.balance === 0 ? 'Account' : statement.balance > 0 ? 'Owes you' : 'Paid ahead' }),
-    div({
-      class: `big-number tnum ${statement.balance > 0 ? 'money--debt' : statement.balance < 0 ? 'money--paid' : ''}`,
-      text: position.amount,
-    }),
-    div({ class: 'inline', style: { marginTop: 'var(--space-4)' } }, [
-      div({ class: 'faint', text: `${format.money(statement.charged)} bought · ${format.money(statement.paid)} paid` }),
+  const headline = div({ class: 'summary' }, [
+    div({}, [
+      div({
+        class: 'stat__label',
+        text: statement.balance === 0 ? 'Account' : statement.balance > 0 ? 'Owes you' : 'Paid ahead',
+      }),
+      div({
+        class: `big-number tnum ${statement.balance > 0 ? 'money--debt' : statement.balance < 0 ? 'money--paid' : ''}`,
+        text: position.amount,
+      }),
+      div({
+        class: 'stat__hint',
+        text:
+          statement.balance === 0
+            ? 'nothing outstanding'
+            : `over ${statement.entryCount} ${statement.entryCount === 1 ? 'entry' : 'entries'}`,
+      }),
     ]),
+    stat({ label: 'Bought in total', value: format.money(statement.charged) }),
+    stat({
+      label: 'Paid in total',
+      value: format.money(statement.paid),
+      tone: statement.paid > 0 ? 'paid' : null,
+    }),
   ]);
 
   const quickActions = div({ class: 'tiles' }, [

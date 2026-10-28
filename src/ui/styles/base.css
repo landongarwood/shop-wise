@@ -39,11 +39,11 @@ h3 {
   margin: 0;
   font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.012em;
 }
 
 h1 {
-  font-size: 20px;
+  font-size: var(--size-title);
 }
 
 h2 {
@@ -71,36 +71,44 @@ button {
   font-feature-settings: 'tnum' 1;
 }
 
+/* ---------- page frame ---------- */
+
 .app {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
 
+/*
+ * The header is a hairline under open content rather than a panel sitting on
+ * top of it: one rule, no fill, no shadow.
+ */
 .appbar {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
   flex: 0 0 auto;
   min-height: var(--appbar-height);
-  padding: 0 var(--space-4);
-  background: var(--surface);
+  padding: var(--space-2) var(--gutter);
   border-bottom: 1px solid var(--border);
+  background: var(--bg);
 }
 
 .screen {
   flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: var(--space-5) var(--space-4) var(--space-7);
+  padding: clamp(18px, 2.5vw, 34px) var(--gutter) clamp(48px, 7vw, 84px);
 }
 
 .screen:focus {
   outline: none;
 }
 
-/* Every screen's content sits in the same column. */
-.sheet-width,
+/*
+ * Content fills the window and is only centred once the window gets very wide,
+ * so there is no fixed-width column boxing the layout in.
+ */
 .screen > * {
   width: 100%;
   max-width: var(--content-max);
