@@ -48,16 +48,6 @@ export async function home(ctx) {
   );
 
   const lookups = div({ class: 'tiles' }, [
-    button({ class: 'tile', onclick: () => go('customers') }, [
-      div({ class: 'tile__icon' }, icon('people', { size: 26 })),
-      div({ class: 'tile__label', text: 'Customers' }),
-      div({
-        class: 'tile__hint',
-        text: overview.counts.customers
-          ? `${overview.counts.customers} ${plural(overview.counts.customers, 'customer')} · who owes what`
-          : 'Add your first customer',
-      }),
-    ]),
     button({ class: 'tile', onclick: () => go('stock') }, [
       div({ class: 'tile__icon' }, icon('layers', { size: 26 })),
       div({ class: 'tile__label', text: 'Stock' }),
@@ -66,6 +56,16 @@ export async function home(ctx) {
         text: overview.counts.products
           ? `${overview.counts.products} ${plural(overview.counts.products, 'product')} · check and top up`
           : 'Add your first product',
+      }),
+    ]),
+    button({ class: 'tile', onclick: () => go('customers') }, [
+      div({ class: 'tile__icon' }, icon('people', { size: 26 })),
+      div({ class: 'tile__label', text: 'Customers' }),
+      div({
+        class: 'tile__hint',
+        text: overview.counts.customers
+          ? `${overview.counts.customers} ${plural(overview.counts.customers, 'customer')} · who owes what`
+          : 'Add your first customer',
       }),
     ]),
     button({ class: 'tile', onclick: () => go('reports', { preset: 'today' }) }, [

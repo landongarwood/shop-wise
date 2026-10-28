@@ -394,6 +394,34 @@ async function main() {
   text = await page.text();
   check('changing the period re-queries', text.includes('$34.50') && text.includes('Today'), text.slice(0, 220));
 
+  // Dates apply themselves; there is no confirm button to press.
+  check(
+    'there is no Show button to forget',
+    (await page.evaluate(
+      `[...document.querySelectorAll('.screen button')].some((b) => b.textContent.trim() === 'Show')`
+    )) === false
+  );
+
+  const dateFilter = await page.evaluate(`
+    (() => {
+      const dates = [...document.querySelectorAll('input[type="date"]')];
+      if (dates.length !== 2) return { error: 'expected two date fields, found ' + dates.length };
+      // A window that ended yesterday cannot contain today's sale.
+      dates[0].value = '2020-01-01';
+      dates[0].dispatchEvent(new Event('change', { bubbles: true }));
+      dates[1].value = '2020-01-31';
+      dates[1].dispatchEvent(new Event('change', { bubbles: true }));
+      return { ok: true };
+    })()
+  `);
+  check('both date fields are present', dateFilter.ok === true, JSON.stringify(dateFilter));
+
+  await wait(900);
+  await page.installHelpers();
+  text = await page.text();
+  check('picking a date re-queries on its own', !text.includes('$34.50'), text.slice(0, 240));
+  check('and says why the table is empty', text.toLowerCase().includes('nothing'), text.slice(0, 240));
+
   /* ---------------- theme ---------------- */
 
   await page.click('.appbar__back');

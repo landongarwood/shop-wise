@@ -67,6 +67,28 @@ export async function reports(ctx) {
   const from = input({ class: 'input', type: 'date', value: params.from ?? report.range.from ?? '', ariaLabel: 'From' });
   const to = input({ class: 'input', type: 'date', value: params.to ?? report.range.to ?? '', ariaLabel: 'To' });
 
+  /*
+   * Dates re-query as soon as one is picked, like the product and customer
+   * choosers — a button to confirm a choice you have already made is a step
+   * that only exists to be forgotten.
+   *
+   * `change` rather than `input`, so a half-typed year does not run a query,
+   * and the far end is dragged along rather than letting the range invert,
+   * which the server would refuse outright.
+   */
+  const applyDates = (moved) => {
+    if (!from.value || !to.value) return;
+
+    if (from.value > to.value) {
+      if (moved === 'from') to.value = from.value;
+      else from.value = to.value;
+    }
+    applyFilter({ from: from.value, to: to.value, preset: undefined });
+  };
+
+  from.addEventListener('change', () => applyDates('from'));
+  to.addEventListener('change', () => applyDates('to'));
+
   /* ---------- product / customer ---------- */
 
   const chooser = ({ label, options, selected, allLabel, onPick }) => {
@@ -117,13 +139,6 @@ export async function reports(ctx) {
       div({ style: { width: 'min(158px, 36vw)' } }, from),
       span({ class: 'faint', text: 'to' }),
       div({ style: { width: 'min(158px, 36vw)' } }, to),
-      button({
-        class: 'button',
-        text: 'Show',
-        onclick: () => {
-          if (from.value && to.value) applyFilter({ from: from.value, to: to.value, preset: undefined });
-        },
-      }),
     ]),
     filtered
       ? button({
