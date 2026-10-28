@@ -142,6 +142,158 @@ describe('the HTTP API', () => {
     assert.equal(container.devChannel, null);
   });
 
+  /*
+   * Every endpoint, exercised through the real router and server. The route
+   * modules are thin, so this is where they are covered rather than with one
+   * test file each.
+   */
+  describe('every endpoint answers', () => {
+    test('meta and health describe the running app', async () => {
+      const meta = await call('GET', '/meta');
+
+      assert.equal(meta.status, 200);
+      assert.equal(meta.payload.product, 'ShopWise');
+      assert.ok(meta.payload.version);
+      assert.equal(meta.payload.storage.adapter, 'in-memory');
+      assert.ok(meta.payload.settings.currency);
+
+      assert.equal((await call('GET', '/health')).payload.ok, true);
+    });
+
+    test('settings can be read and changed', async () => {
+      assert.equal((await call('GET', '/settings')).status, 200);
+
+      const updated = await call('PATCH', '/settings', { lowStockAt: 9 });
+      assert.equal(updated.status, 200);
+      assert.equal(updated.payload.lowStockAt, 9);
+      assert.equal((await call('GET', '/settings')).payload.lowStockAt, 9);
+
+      assert.equal((await call('PATCH', '/settings', { lowStockAt: -5 })).status, 400);
+    });
+
+    test('a product can be listed, changed and hidden', async () => {
+      const created = await call('POST', '/products', { name: 'Tea', unit: 'kg', price: '3.00' });
+      const id = created.payload.id;
+
+      assert.ok((await call('GET', '/products')).payload.some((row) => row.id === id));
+
+      const patched = await call('PATCH', `/products/${id}`, { price: '3.50' });
+      assert.equal(patched.payload.price, 350);
+
+      assert.equal((await call('DELETE', `/products/${id}`)).payload.archived, true);
+      assert.ok(!(await call('GET', '/products')).payload.some((row) => row.id === id), 'hidden by default');
+      assert.ok(
+        (await call('GET', '/products?includeArchived=true')).payload.some((row) => row.id === id),
+        'but still reachable'
+      );
+    });
+
+    test('stock levels, low stock, movements and undoing a delivery', async () => {
+      const product = (await call('POST', '/products', { name: 'Sacks', unit: 'bag', price: '2.00' })).payload;
+      const entry = (await call('POST', '/stock', { productId: product.id, quantity: 4 })).payload;
+
+      const levels = await call('GET', '/stock');
+      assert.equal(levels.payload.find((row) => row.id === product.id).onHand, 4);
+
+      assert.equal((await call('GET', '/stock/low')).status, 200);
+
+      const movements = await call('GET', `/stock/products/${product.id}/movements`);
+      assert.equal(movements.payload.total, 1);
+      assert.equal(movements.payload.entries[0].kind, 'in');
+      assert.equal(movements.payload.hasMore, false);
+
+      assert.equal((await call('GET', `/stock/products/${product.id}/movements?limit=1`)).payload.entries.length, 1);
+      assert.equal((await call('GET', `/stock/products/${product.id}/movements?limit=0`)).status, 400);
+
+      assert.equal((await call('DELETE', `/stock/entries/${entry.id}`)).payload.removed, true);
+      assert.equal((await call('GET', '/stock')).payload.find((row) => row.id === product.id).onHand, 0);
+    });
+
+    test('sales can be listed, fetched and deleted', async () => {
+      const product = (await call('POST', '/products', { name: 'Rolls', price: '1.00' })).payload;
+      await call('POST', '/stock', { productId: product.id, quantity: 10 });
+      const customer = (await call('POST', '/customers', { name: 'Dana' })).payload;
+
+      const sale = (
+        await call('POST', '/sales', {
+          customerId: customer.id,
+          items: [{ productId: product.id, quantity: 2 }],
+        })
+      ).payload.sale;
+
+      assert.ok((await call('GET', '/sales')).payload.some((row) => row.id === sale.id));
+      assert.equal((await call('GET', `/sales?customerId=${customer.id}`)).payload.length, 1);
+      assert.equal((await call('GET', `/sales/${sale.id}`)).payload.total, 200);
+      assert.equal((await call('GET', '/sales/nope')).status, 404);
+
+      assert.equal((await call('DELETE', `/sales/${sale.id}`)).payload.removed, true);
+      assert.equal((await call('GET', `/sales/${sale.id}`)).status, 404);
+      assert.equal(
+        (await call('GET', '/stock')).payload.find((row) => row.id === product.id).onHand,
+        10,
+        'deleting the sale put the stock back'
+      );
+    });
+
+    test('payments can be listed and deleted, and the balance follows', async () => {
+      const customer = (await call('POST', '/customers', { name: 'Eve' })).payload;
+      const payment = (await call('POST', '/payments', { customerId: customer.id, amount: '15' })).payload;
+
+      assert.ok((await call('GET', '/payments')).payload.some((row) => row.id === payment.id));
+      assert.equal((await call('GET', `/payments?customerId=${customer.id}`)).payload.length, 1);
+
+      const before = await call('GET', `/customers/${customer.id}/statement`);
+      assert.equal(before.payload.balance, -1500, 'paid ahead');
+
+      assert.equal((await call('DELETE', `/payments/${payment.id}`)).payload.removed, true);
+      assert.equal((await call('GET', `/customers/${customer.id}/statement`)).payload.balance, 0);
+    });
+
+    test('a customer can be changed and hidden', async () => {
+      const customer = (await call('POST', '/customers', { name: 'Frank' })).payload;
+
+      assert.equal(
+        (await call('PATCH', `/customers/${customer.id}`, { name: 'Frank Lee' })).payload.name,
+        'Frank Lee'
+      );
+      assert.equal((await call('DELETE', `/customers/${customer.id}`)).payload.archived, true);
+      assert.ok(!(await call('GET', '/customers')).payload.some((row) => row.id === customer.id));
+    });
+
+    test('a statement takes a limit, and refuses a silly one', async () => {
+      const customer = (await call('POST', '/customers', { name: 'Gail' })).payload;
+
+      assert.equal((await call('GET', `/customers/${customer.id}/statement?limit=5`)).status, 200);
+      assert.equal((await call('GET', `/customers/${customer.id}/statement?limit=0`)).status, 400);
+      assert.equal((await call('GET', `/customers/${customer.id}/statement?limit=abc`)).status, 400);
+    });
+
+    test('the sales report takes a period and filters', async () => {
+      const all = await call('GET', '/reports/sales?preset=all');
+
+      assert.equal(all.status, 200);
+      assert.ok(Array.isArray(all.payload.lines));
+      assert.ok(Array.isArray(all.payload.options.products));
+
+      assert.equal((await call('GET', '/reports/sales?from=2026-01-01&to=2026-01-31')).status, 200);
+      assert.equal((await call('GET', '/reports/sales?preset=fortnight')).status, 400);
+      assert.equal((await call('GET', '/reports/sales?from=2026-03-10&to=2026-03-01')).status, 400);
+
+      const filtered = await call('GET', '/reports/sales?preset=all&productId=nothing-matches');
+      assert.equal(filtered.status, 200);
+      assert.deepEqual(filtered.payload.lines, [], 'a filter matching nothing is empty, not an error');
+    });
+
+    test('the overview answers', async () => {
+      const overview = await call('GET', '/overview');
+
+      assert.equal(overview.status, 200);
+      assert.ok('today' in overview.payload);
+      assert.ok('month' in overview.payload);
+      assert.ok('ledger' in overview.payload);
+    });
+  });
+
   test('rejects writes to the static side', async () => {
     const response = await fetch(`${base}/styles/tokens.css`, { method: 'POST' });
     assert.equal(response.status, 405);

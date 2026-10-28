@@ -49,14 +49,4 @@ export const button = (props, children) => el('button', { type: 'button', ...pro
 export const input = (props) => el('input', props);
 export const label = (props, children) => el('label', props, children);
 export const h1 = (props, children) => el('h1', props, children);
-export const h2 = (props, children) => el('h2', props, children);
 export const section = (props, children) => el('section', props, children);
-
-/** Debounce, for search boxes that filter as the user types. */
-export function debounce(fn, delay = 120) {
-  let timer = null;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
-}

@@ -87,14 +87,20 @@ window's URL has to survive the restarts.
 ## Tests
 
 ```sh
-npm test           # 62 unit + HTTP + module-graph tests, instant
+npm test           # 263 unit, HTTP and asset tests, instant
 npm run test:e2e   # drives the real UI in headless Edge, ~20s
 npm run test:all   # both
 ```
 
-`npm test` needs nothing but Node. The domain is tested over an in-memory store
-with a fixed clock, which the composition root accepts as parameters — see
-[test/support/fixture.js](test/support/fixture.js).
+`npm test` needs nothing but Node and covers every module on the server side:
+
+| | |
+| --- | --- |
+| `test/domain/` | The rules — catalog, customers, inventory, sales, ledger, reports, overview, settings — over an in-memory store with a fixed clock and sequential ids, which the composition root accepts as parameters. See [test/support/fixture.js](test/support/fixture.js). |
+| `test/persistence/` | The document store (atomic writes, transactional mutations, serialised concurrency, a corrupt file quarantined rather than replaced), daily backups, repositories and the stored schema. |
+| `test/shared/` | Money, quantities, validation, day ranges, clock and ids. |
+| `test/http/` | Router, session token, static files, dev reload, and every endpoint through the real server. |
+| `test/ui/` | The module graph, the stylesheets against the markup, colour contrast, and the formatter. |
 
 [test/e2e/flows.js](test/e2e/flows.js) clicks through a real sale, a partial
 payment, the customer history and the report in headless Edge over the DevTools

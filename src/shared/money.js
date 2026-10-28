@@ -52,4 +52,4 @@ const sum = (values) => values.reduce((total, value) => total + value, 0);
 
 const capitalise = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
-module.exports = { parseMinor, requireMinor, multiply, sum, DECIMALS };
+module.exports = { parseMinor, requireMinor, multiply, sum };

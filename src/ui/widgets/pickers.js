@@ -192,26 +192,3 @@ export async function openCustomerPicker({ api, format, title = 'Which customer?
   });
 }
 
-/** Pick a product from a sheet, for places where the full list does not fit. */
-export async function openProductPicker({ api, format, title = 'Which product?' }) {
-  const products = await api.get('/stock');
-
-  return openListPicker({
-    title,
-    items: products,
-    placeholder: 'Search products',
-    searchOn: (product) => product.name,
-    emptyTitle: 'No products yet.',
-    newLabel: 'New product',
-    onNew: () => openNewProductSheet({ api }),
-    renderRow: (product) => [
-      div({ class: 'row__main' }, [
-        div({ class: 'row__title', text: product.name }),
-        div({ class: 'row__sub tnum', text: `${format.quantity(product.onHand)} ${product.unit ?? ''} in stock`.trim() }),
-      ]),
-      div({ class: 'row__end' }, div({ class: 'row__amount tnum', text: format.money(product.price) })),
-    ],
-  });
-}
-
-export { searchBox, openListPicker };
