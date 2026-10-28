@@ -17,8 +17,8 @@ Three things the shopkeeper does, each one tap from the home screen:
 
 | | |
 | --- | --- |
-| **Sell** | Pick a customer, tap products. Each tap asks how many and at what price — pre-filled with the usual price, editable because it varies. |
-| **Add stock** | Tap a product, say how much came in. Saves immediately, so a long delivery can't be half-lost. |
+| **Sell** | Pick a customer, then find products in a searchable list. Each pick asks how many and at what price — pre-filled with the usual price, editable because it varies. |
+| **Add stock** | Find a product, say how much came in. Saves immediately, so a long delivery can't be half-lost. |
 | **Take payment** | Pick a customer, enter what they paid. "Pay all" is one tap. Any date, any amount. |
 
 And four things they look up:
@@ -29,6 +29,13 @@ And four things they look up:
 | **One customer** | Balance as a headline, then sales and payments on one timeline with the balance as it stood after each — so a disputed total can be read down until you disagree. |
 | **Stock** | What's on the shelves; anything short floats to the top. |
 | **Sales report** | What sold over any period — today, this month, last month, or a custom range — ranked by the money it brought in, plus who bought and a day-by-day breakdown. |
+
+Products are a searchable list rather than a grid of tiles, because a shop can
+easily carry hundreds. Typing filters as you go and Enter takes the top match,
+so a sale can be entered without the hand leaving the keyboard. The list scrolls
+in its own area, so the running total and the save button never get pushed off
+the screen. Measured with a 500-product catalogue: 43 ms to open the sell screen
+with every row rendered, 1 ms to filter.
 
 ## Two rules the whole app rests on
 

@@ -1,23 +1,25 @@
 import { div, button, input, append, clear } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { openSheet } from '../core/sheet.js';
-import { openNewCustomerSheet } from './forms.js';
+import { openNewCustomerSheet, openNewProductSheet } from './forms.js';
 import { badge } from './states.js';
 
 /**
  * Choosing a thing from a list.
  *
- * Search filters as you type but is never required: with a handful of products
- * or customers the list is simply all of them, as big tappable rows. The
- * "new one" button sits inside the picker, because needing something that is
- * not in the list yet is exactly when you discover it is missing.
+ * A shop can easily carry hundreds of products, so these are lists with a
+ * search box rather than grids of tiles: typing two or three letters beats
+ * hunting through pages of boxes, and a list stays readable at any length.
+ * The "new one" button sits inside the picker, because needing something that
+ * is not in the list yet is exactly when you discover it is missing.
  */
 
-function searchBox({ placeholder, onChange }) {
+function searchBox({ placeholder, onChange, label = placeholder }) {
   const control = input({
     class: 'input input--search',
     type: 'search',
     placeholder,
+    ariaLabel: label,
     autocomplete: 'off',
     oninput: () => onChange(control.value.trim().toLowerCase()),
   });
@@ -25,27 +27,106 @@ function searchBox({ placeholder, onChange }) {
   return { node: div({ style: { marginBottom: 'var(--space-3)' } }, control), control };
 }
 
+const matches = (haystack, term) => !term || haystack.toLowerCase().includes(term);
+
+/**
+ * The product list used on the sell and stock-in screens.
+ *
+ * Search filters as you type and Enter takes the top match, so a sale can be
+ * entered from the keyboard without the hand leaving it. The rows scroll within
+ * their own area rather than pushing the running total off the screen.
+ *
+ * @returns {{node: HTMLElement, focusSearch: Function}}
+ */
+export function productList({ products, format, onPick, onNew = null, newLabel = 'New product' }) {
+  const rows = div({ class: 'rows picker__rows' });
+  const count = div({ class: 'picker__count' });
+
+  let visible = [];
+
+  const draw = (term = '') => {
+    clear(rows);
+    visible = products.filter((product) => matches(product.name, term));
+
+    count.textContent = term
+      ? `${visible.length} of ${products.length} ${products.length === 1 ? 'product' : 'products'}`
+      : `${products.length} ${products.length === 1 ? 'product' : 'products'}`;
+
+    if (!visible.length) {
+      append(rows, div({ class: 'row row--static' }, div({ class: 'soft', text: 'No product matches that.' })));
+      return;
+    }
+
+    append(rows, visible.map((product) => productRow(product, format, onPick)));
+  };
+
+  const search = searchBox({
+    placeholder: 'Search products — type to filter',
+    label: 'Search products',
+    onChange: draw,
+  });
+
+  // Enter takes the top match, so the keyboard alone is enough.
+  search.control.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || !visible.length) return;
+    event.preventDefault();
+    onPick(visible[0]);
+  });
+
+  draw();
+
+  const node = div({ class: 'picker' }, [
+    div({ class: 'picker__head' }, [
+      div({ class: 'grow' }, search.node),
+      onNew ? button({ class: 'button', onclick: onNew }, [icon('plus', { size: 18 }), newLabel]) : null,
+    ]),
+    count,
+    rows,
+  ]);
+
+  return {
+    node,
+    focusSearch: () => search.control.focus(),
+  };
+}
+
+function productRow(product, format, onPick) {
+  const out = product.onHand <= 0;
+  const low = !out && product.low;
+
+  return button({ class: 'row', onclick: () => onPick(product) }, [
+    div({ class: 'row__main' }, [
+      div({ class: 'row__title', text: product.name }),
+      div({
+        class: `row__sub tnum${out ? ' money--debt' : low ? ' picker__low' : ''}`,
+        text: out
+          ? 'none in stock'
+          : `${format.quantity(product.onHand)} ${product.unit ?? ''} in stock`.replace('  ', ' ').trim(),
+      }),
+    ]),
+    div({ class: 'row__end' }, div({ class: 'row__amount tnum', text: format.money(product.price) })),
+  ]);
+}
+
 /**
  * A searchable list inside a sheet. Tapping a row closes the sheet with that
  * row's item; the sheet has no confirm button because the choice *is* the tap.
  */
-function openListPicker({ title, items, placeholder, renderRow, newLabel = null, onNew = null, emptyTitle }) {
+function openListPicker({ title, items, placeholder, renderRow, searchOn, newLabel = null, onNew = null, emptyTitle }) {
   return openSheet({
     title,
     wide: true,
     hideConfirm: true,
     cancelLabel: 'Close',
     body: (close) => {
-      const rows = div({ class: 'rows' });
+      const rows = div({ class: 'rows picker__rows' });
+      let visible = [];
 
       const draw = (term = '') => {
         clear(rows);
+        visible = items.filter((item) => matches(searchOn(item), term));
 
-        const matches = term
-          ? items.filter((item) => `${item.name} ${item.phone ?? ''}`.toLowerCase().includes(term))
-          : items;
-
-        if (!matches.length) {
+        if (!visible.length) {
           append(
             rows,
             div({ class: 'row row--static' }, div({ class: 'soft', text: term ? 'Nothing matches that.' : emptyTitle }))
@@ -55,11 +136,17 @@ function openListPicker({ title, items, placeholder, renderRow, newLabel = null,
 
         append(
           rows,
-          matches.map((item) => button({ class: 'row', onclick: () => close(item) }, renderRow(item)))
+          visible.map((item) => button({ class: 'row', onclick: () => close(item) }, renderRow(item)))
         );
       };
 
       const search = searchBox({ placeholder, onChange: draw });
+      search.control.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || !visible.length) return;
+        event.preventDefault();
+        close(visible[0]);
+      });
+
       draw();
 
       return div({}, [
@@ -91,6 +178,7 @@ export async function openCustomerPicker({ api, format, title = 'Which customer?
     title,
     items: customers,
     placeholder: 'Search customers',
+    searchOn: (customer) => `${customer.name} ${customer.phone ?? ''}`,
     emptyTitle: 'No customers yet.',
     newLabel: 'New customer',
     onNew: () => openNewCustomerSheet({ api }),
@@ -107,7 +195,7 @@ export async function openCustomerPicker({ api, format, title = 'Which customer?
   });
 }
 
-/** Pick a product from a sheet, used where a grid would not fit. */
+/** Pick a product from a sheet, for places where the full list does not fit. */
 export async function openProductPicker({ api, format, title = 'Which product?' }) {
   const products = await api.get('/stock');
 
@@ -115,55 +203,18 @@ export async function openProductPicker({ api, format, title = 'Which product?' 
     title,
     items: products,
     placeholder: 'Search products',
+    searchOn: (product) => product.name,
     emptyTitle: 'No products yet.',
     newLabel: 'New product',
-    onNew: () => import('./forms.js').then((module) => module.openNewProductSheet({ api })),
+    onNew: () => openNewProductSheet({ api }),
     renderRow: (product) => [
       div({ class: 'row__main' }, [
         div({ class: 'row__title', text: product.name }),
-        div({ class: 'row__sub', text: `${format.quantity(product.onHand)} ${product.unit ?? ''} in stock`.trim() }),
+        div({ class: 'row__sub tnum', text: `${format.quantity(product.onHand)} ${product.unit ?? ''} in stock`.trim() }),
       ]),
       div({ class: 'row__end' }, div({ class: 'row__amount tnum', text: format.money(product.price) })),
     ],
   });
-}
-
-/**
- * The product grid used on the sell and stock-in screens: everything visible at
- * once, one tap to act, no menus.
- */
-export function productGrid({ products, format, onPick, onNew = null, newLabel = 'New product' }) {
-  const grid = div({ class: 'pick-grid' });
-
-  const tile = (product) => {
-    const out = product.onHand <= 0;
-    const low = !out && product.low;
-
-    return button({ class: `pick${out ? ' pick--out' : low ? ' pick--low' : ''}`, onclick: () => onPick(product) }, [
-      div({ class: 'pick__name', text: product.name }),
-      div({ class: 'pick__price tnum', text: format.money(product.price) }),
-      div({
-        class: 'pick__stock tnum',
-        text: out
-          ? 'none in stock'
-          : `${format.quantity(product.onHand)} ${product.unit ?? ''} in stock`.trim(),
-      }),
-    ]);
-  };
-
-  append(grid, products.map(tile));
-
-  if (onNew) {
-    append(
-      grid,
-      button(
-        { class: 'pick', style: { justifyContent: 'center', alignItems: 'center', color: 'var(--accent)' }, onclick: onNew },
-        [icon('plus', { size: 26 }), div({ class: 'pick__name', text: newLabel })]
-      )
-    );
-  }
-
-  return grid;
 }
 
 export { searchBox, openListPicker };

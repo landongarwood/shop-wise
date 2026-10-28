@@ -1,7 +1,7 @@
 import { div, button, append, clear } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { toastOk, toastWarn } from '../core/toast.js';
-import { openCustomerPicker, productGrid } from '../widgets/pickers.js';
+import { openCustomerPicker, productList } from '../widgets/pickers.js';
 import { openNewProductSheet, openSaleLineSheet } from '../widgets/forms.js';
 import { emptyState } from '../widgets/states.js';
 
@@ -26,6 +26,7 @@ export async function sell(ctx) {
 
   const customerSlot = div({ class: 'section' });
   const cartSlot = div({ class: 'cart' });
+  let picker = null;
 
   /* ---------- customer ---------- */
 
@@ -35,6 +36,8 @@ export async function sell(ctx) {
       customer = chosen;
       drawCustomer();
       drawCart();
+      // The next thing to do is find a product, so put the cursor there.
+      picker?.focusSearch();
     }
   };
 
@@ -206,6 +209,15 @@ export async function sell(ctx) {
     };
   }
 
+  picker = productList({
+    products,
+    format,
+    onPick: addLine,
+    onNew: async () => {
+      if (await openNewProductSheet({ api })) ctx.reload();
+    },
+  });
+
   drawCustomer();
   drawCart();
 
@@ -213,14 +225,7 @@ export async function sell(ctx) {
     customerSlot,
     div({ class: 'section' }, [
       div({ class: 'section__head' }, div({ class: 'section__title', text: 'What did they take?' })),
-      productGrid({
-        products,
-        format,
-        onPick: addLine,
-        onNew: async () => {
-          if (await openNewProductSheet({ api })) ctx.reload();
-        },
-      }),
+      picker.node,
     ]),
     cartSlot,
   ]);

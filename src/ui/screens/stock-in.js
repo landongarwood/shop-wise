@@ -1,6 +1,6 @@
 import { div } from '../core/dom.js';
 import { toastOk } from '../core/toast.js';
-import { productGrid } from '../widgets/pickers.js';
+import { productList } from '../widgets/pickers.js';
 import { openAddStockSheet, openNewProductSheet } from '../widgets/forms.js';
 import { emptyState } from '../widgets/states.js';
 
@@ -46,8 +46,8 @@ export async function stockIn(ctx) {
   };
 
   const body = div({}, [
-    div({ class: 'section' }, div({ class: 'faint', text: 'Tap a product to say how much came in.' })),
-    productGrid({ products, format, onPick: addStock, onNew: addNewProduct }),
+    div({ class: 'section' }, div({ class: 'faint', text: 'Find a product and say how much came in.' })),
+    productList({ products, format, onPick: addStock, onNew: addNewProduct }).node,
   ]);
 
   return {

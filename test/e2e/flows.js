@@ -206,7 +206,7 @@ async function main() {
   await page.click('.tile', 'Sell');
   text = await page.text();
   check('sell screen asks for a customer first', text.includes('Choose customer'));
-  check('sell screen shows the products', text.includes('Coffee beans'));
+  check('sell screen lists the products', text.includes('Coffee beans'));
 
   await page.click('.button', 'Choose customer');
   check('customer picker opens', await page.evaluate('window.__sheetOpen()'));
@@ -217,7 +217,7 @@ async function main() {
   await page.click('.row', 'Alice Mwangi');
   check('choosing a customer closes the picker', !(await page.evaluate('window.__sheetOpen()')));
 
-  await page.click('.pick', 'Coffee beans');
+  await page.click('.picker__rows .row', 'Coffee beans');
   check('tapping a product asks how many', await page.evaluate('window.__sheetOpen()'));
 
   text = await page.text();

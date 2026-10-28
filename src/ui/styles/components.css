@@ -295,59 +295,41 @@
 
 /* ---------- product picker ---------- */
 
-.pick-grid {
-  display: grid;
-  gap: clamp(8px, 1vw, 14px);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 184px), 1fr));
-}
+/*
+ * A shop can carry hundreds of products, so this is a list with a search box
+ * rather than a grid of tiles. The rows scroll inside their own area so the
+ * running total and the save button never get pushed off the screen, however
+ * long the catalogue is.
+ */
 
-.pick {
+.picker__head {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-height: 94px;
-  padding: var(--space-4);
-  border: 0;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--transition), box-shadow var(--transition), transform var(--transition);
+  align-items: flex-start;
+  gap: var(--space-3);
 }
 
-.pick:hover {
-  background: var(--surface-hover);
-  box-shadow: inset 0 0 0 2px var(--accent);
+.picker__head .button {
+  flex: 0 0 auto;
 }
 
-.pick:active {
-  transform: scale(0.99);
-}
-
-.pick__name {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.pick__price {
-  font-size: 15px;
-}
-
-.pick__stock {
-  margin-top: auto;
+.picker__count {
+  padding-bottom: var(--space-2);
   color: var(--text-faint);
-  font-size: 13px;
-}
-
-.pick--low .pick__stock {
-  color: var(--warn);
+  font-size: 12px;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.pick--out .pick__stock {
-  color: var(--debt);
+.picker__rows {
+  max-height: clamp(220px, 44vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--border);
+}
+
+.picker__low {
+  color: var(--warn);
   font-weight: 600;
 }
 
